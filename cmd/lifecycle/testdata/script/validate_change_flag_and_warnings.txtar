@@ -1,0 +1,74 @@
+# --change selects a single change folder even when others would fail;
+# a warning-severity finding (an unrecognized-section "### Requirement:")
+# is reported but does not fail the exit code (0), unlike an error.
+
+# Without --change, both change folders are checked and the broken one
+# fails the run.
+exitcode 1 lifecycle validate --stage refine
+stdout 'broken.*proposal\.md.*missing a non-empty "issue" field'
+stdout 'has-warning.*appears under an unrecognized section heading'
+
+# With --change, only the named (well-formed but warning-carrying) folder
+# is checked, and a warning alone keeps the exit code at 0.
+exitcode 0 lifecycle validate --stage refine --change has-warning
+stdout '\[warning\].*appears under an unrecognized section heading'
+stdout 'validate: 1 change\(s\), 0 error\(s\), 1 warning\(s\)'
+
+-- openspec/changes/has-warning/proposal.md --
+---
+issue: "kentra-io/kafka-dq#7"
+---
+
+# Title
+
+## Why
+x
+
+## What Changes
+- x
+
+## Impact
+- x
+
+-- openspec/changes/has-warning/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow login.
+
+#### Scenario: ok
+- **GIVEN** a
+- **WHEN** b
+- **THEN** c
+
+## Notes
+
+### Requirement: Orphaned under Notes
+This one would be silently dropped by the fold.
+
+-- openspec/changes/broken/proposal.md --
+---
+issue: ""
+---
+
+# Title
+
+## Why
+x
+
+## What Changes
+- x
+
+## Impact
+- x
+
+-- openspec/changes/broken/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow login.
+
+#### Scenario: ok
+- **GIVEN** a
+- **WHEN** b
+- **THEN** c

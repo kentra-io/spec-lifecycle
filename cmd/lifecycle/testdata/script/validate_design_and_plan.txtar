@@ -1,0 +1,51 @@
+# `lifecycle validate --stage design`/`--stage plan`: happy path for one
+# change (well-formed design.md/tasks.md) and a findings path for a
+# sibling change missing the NFR-discharge heading / a milestone label.
+
+exitcode 0 lifecycle validate --stage design --change good-design
+stdout 'good-design: ok'
+
+exitcode 1 lifecycle validate --stage design --change bad-design
+stdout 'missing an explicit NFR-discharge section'
+
+exitcode 0 lifecycle validate --stage plan --change good-plan
+stdout 'good-plan: ok'
+
+exitcode 1 lifecycle validate --stage plan --change bad-plan
+stdout 'is missing the \*\*Validation contract\*\* label'
+
+-- openspec/changes/good-design/design.md --
+# Title — Design
+
+## Context
+Background.
+
+## NFR Discharge
+- Latency: p99 under 200ms, verified by benchmark.
+
+## Risks / Trade-offs
+None known.
+
+-- openspec/changes/bad-design/design.md --
+# Title — Design
+
+## Context
+Background, but no NFR section at all.
+
+-- openspec/changes/good-plan/tasks.md --
+## Milestone 1: Password login
+**Goal** — implement password-based login.
+**Deliverables** — login handler, session cookie.
+**Validation contract** — checkable acceptance criteria, pre-committed:
+  - `go test ./auth/...` passes
+  - Scenario "Successful login" passes
+**Steps** — ordered breakdown, sized per `planGranularity`:
+  1. Implement login handler
+  2. Write scenario test
+
+-- openspec/changes/bad-plan/tasks.md --
+## Milestone 1: Password login
+**Goal** — implement password-based login.
+**Deliverables** — login handler, session cookie.
+**Steps** — ordered breakdown, sized per `planGranularity`:
+  1. Implement login handler

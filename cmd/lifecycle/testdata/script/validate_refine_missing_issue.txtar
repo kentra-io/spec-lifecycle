@@ -1,0 +1,37 @@
+# `lifecycle validate --stage refine` on a proposal.md whose frontmatter
+# has no non-empty "issue" field: exit 1, a missing_issue_ref finding on
+# stdout naming the file, --format json carries the same finding.
+
+exitcode 1 lifecycle validate --stage refine
+stdout '\[error\] .*proposal\.md:1: proposal\.md''s frontmatter is missing a non-empty "issue" field'
+
+exitcode 1 lifecycle validate --stage refine --format json
+stdout '"kind": "missing_issue_ref"'
+stdout '"severity": "error"'
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: ""
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session
