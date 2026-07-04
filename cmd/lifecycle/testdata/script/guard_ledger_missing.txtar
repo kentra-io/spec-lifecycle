@@ -1,0 +1,53 @@
+# Deleting openspec/ledger.jsonl while an archived change folder still
+# exists is the ledger_missing precondition finding — checks 1-3 do not
+# run at all (there is nothing left to check them against).
+
+env HOME=/no-home
+
+exec lifecycle archive 001-add-password-login
+rm openspec/ledger.jsonl
+
+exitcode 1 lifecycle guard --format json
+stdout '"kind": "ledger_missing"'
+stdout '"check": "ledger"'
+stdout '"findings": 1'
+stdout '"changesChecked": 0'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-password-login/proposal.md --
+# Add password login
+
+## Why
+The `auth` capability does not yet exist.
+
+-- openspec/changes/001-add-password-login/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/001-add-password-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-password-login",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}

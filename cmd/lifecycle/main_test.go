@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -61,6 +62,16 @@ func TestScripts(t *testing.T) {
 			// main_test.go helper of the same name, used by
 			// approve_design_gate_real_constitution.txtar.
 			"injecthash": cmdInjecthash,
+			// tamperledger <seq> <field> <value> rewrites ONE JSON field on
+			// the openspec/ledger.jsonl record whose "seq" equals <seq>, in
+			// place — used by guard_chain_break.txtar to simulate exactly the
+			// kind of out-of-band ledger tamper `lifecycle guard`'s
+			// digest-chain check (internal/guard/chain.go) exists to catch,
+			// without hand-computing the real sha256 hex values a
+			// hand-written replacement ledger.jsonl fixture would otherwise
+			// need (mirrors internal/guard's own guard_test.go
+			// rewriteLedgerField helper, at the black-box/CLI grain).
+			"tamperledger": cmdTamperledger,
 		},
 		// Setup/Condition wire the one testscript that exercises the REAL
 		// constitution binary (approve_design_gate_real_constitution.txtar,
@@ -165,6 +176,49 @@ func cmdInjecthash(ts *testscript.TestScript, neg bool, args []string) {
 	out := strings.ReplaceAll(string(data), "__HASH__", hash)
 	if err := os.WriteFile(target, []byte(out), 0o644); err != nil {
 		ts.Fatalf("injecthash: writing %s: %v", args[0], err)
+	}
+}
+
+func cmdTamperledger(ts *testscript.TestScript, neg bool, args []string) {
+	if neg || len(args) != 3 {
+		ts.Fatalf("usage: tamperledger <seq> <field> <value>")
+	}
+	wantSeq, err := strconv.Atoi(args[0])
+	if err != nil {
+		ts.Fatalf("tamperledger: <seq> must be a number, got %q", args[0])
+	}
+	field, value := args[1], args[2]
+
+	path := ts.MkAbs("openspec/ledger.jsonl")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		ts.Fatalf("tamperledger: reading %s: %v", path, err)
+	}
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+
+	found := false
+	for i, line := range lines {
+		var rec map[string]any
+		if jerr := json.Unmarshal([]byte(line), &rec); jerr != nil {
+			ts.Fatalf("tamperledger: unmarshaling line %d: %v", i, jerr)
+		}
+		if seq, ok := rec["seq"].(float64); !ok || int(seq) != wantSeq {
+			continue
+		}
+		rec[field] = value
+		out, jerr := json.Marshal(rec)
+		if jerr != nil {
+			ts.Fatalf("tamperledger: marshaling line %d: %v", i, jerr)
+		}
+		lines[i] = string(out)
+		found = true
+		break
+	}
+	if !found {
+		ts.Fatalf("tamperledger: no ledger record with seq %d found in %s", wantSeq, path)
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		ts.Fatalf("tamperledger: writing %s: %v", path, err)
 	}
 }
 

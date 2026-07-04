@@ -1,0 +1,66 @@
+# `lifecycle guard`'s "could not run at all" paths (exit 2): a bad
+# --format, no openspec/ project root, and a malformed (present but
+# unparseable) ledger.jsonl. A malformed ledger is NOT a finding
+# (exit 1) — it is an environment failure guard cannot even check
+# against, distinct from ledger_missing (guard_ledger_missing.txtar),
+# which IS a finding.
+
+env HOME=/no-home
+
+exitcode 2 lifecycle guard --format xml
+stderr 'guard: --format must be "text" or "json"'
+
+cd noopenspec
+exitcode 2 lifecycle guard
+stderr 'no openspec/ directory'
+cd ..
+
+exec lifecycle archive 001-add-password-login
+cp malformed-ledger.jsonl openspec/ledger.jsonl
+
+exitcode 2 lifecycle guard
+stderr 'guard:'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- noopenspec/.keep --
+
+-- openspec/changes/001-add-password-login/proposal.md --
+# Add password login
+
+## Why
+The `auth` capability does not yet exist.
+
+-- openspec/changes/001-add-password-login/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/001-add-password-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-password-login",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
+
+-- malformed-ledger.jsonl --
+not json at all

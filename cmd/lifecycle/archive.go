@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"github.com/kentra-io/spec-lifecycle/internal/archive"
+	"github.com/kentra-io/spec-lifecycle/internal/guard"
 )
 
 // Exit codes for `lifecycle archive` (spec-lifecycle.md §6.2,
@@ -53,11 +54,16 @@ func archiveCommand() *cli.Command {
 			"                    to openspec/ledger.jsonl with the next monotonic seq,\n" +
 			"                    then re-reads the archived folder and any folded specs\n" +
 			"                    from disk to self-check they match what was just\n" +
-			"                    recorded.\n\n" +
+			"                    recorded, then runs the FULL `lifecycle guard` (§6.3)\n" +
+			"                    over the whole project as a comprehensive post-archive\n" +
+			"                    self-check (§2.5 step 5) — a guard problem is surfaced\n" +
+			"                    loudly (non-zero exit) even though the archive itself\n" +
+			"                    already committed.\n\n" +
 			"Exit codes: 0 ok, 1 refused (gate/conflict/fold — nothing written), 2\n" +
 			"could not run (bad flags, no openspec/ tree, missing change folder, an\n" +
-			"environment failure, or an internal self-check failure). Run from a\n" +
-			"spec-lifecycle project root (a directory containing openspec/).",
+			"environment failure, an internal self-check failure, or a post-archive\n" +
+			"guard problem). Run from a spec-lifecycle project root (a directory\n" +
+			"containing openspec/).",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "force-gates", Usage: "archive even though a required gate is not approved (recorded on every ledger record)"},
 			&cli.BoolFlag{Name: "force-conflicts", Usage: "archive even though another in-flight change touches the same requirement (recorded on every ledger record)"},
@@ -122,9 +128,51 @@ func runArchive(cmd *cli.Command) error {
 		if werr := writeArchiveJSON(stdout, res); werr != nil {
 			return &exitError{err: fmt.Errorf("archive: writing output: %w", werr), code: archiveExitCouldNotRun}
 		}
+	} else if werr := writeArchiveText(stdout, change, res); werr != nil {
+		return &exitError{err: fmt.Errorf("archive: writing output: %w", werr), code: archiveExitCouldNotRun}
+	}
+
+	// Post-archive guard self-check (implementation-plan.md §2.5 step 5,
+	// archive/doc.go's "post-write self-check" section): the archive
+	// already committed successfully above; this is a comprehensive,
+	// whole-project detection pass layered on top (guard/doc.go's
+	// "Archive integration"), never a rollback. A problem here must
+	// surface loudly — a non-zero exit — even though res above already
+	// printed a successful archive.
+	if gerr := postArchiveGuard(cmd, cwd); gerr != nil {
+		return gerr
+	}
+	return nil
+}
+
+// postArchiveGuard runs the full `lifecycle guard` (internal/guard) over
+// root immediately after a successful archive.Archive call, per
+// implementation-plan.md §2.5 step 5. Returns nil when guard ran and found
+// nothing; otherwise an *exitError mapped to archiveExitCouldNotRun (the
+// archive itself already wrote its state — this is detection, not refusal
+// — so it shares archive's existing "something is wrong" exit code rather
+// than inventing a new one).
+func postArchiveGuard(cmd *cli.Command, root string) error {
+	gres, gerr := guard.Run(guard.Options{Root: root})
+	if gerr != nil {
+		return &exitError{
+			err:  fmt.Errorf("archive: post-archive guard self-check could not run: %w", gerr),
+			code: archiveExitCouldNotRun,
+		}
+	}
+	if gres.Summary.Clean {
 		return nil
 	}
-	return writeArchiveText(stdout, change, res)
+
+	stderr := cmd.Root().ErrWriter
+	fmt.Fprintln(stderr, "archive: warning: post-archive guard self-check found problems with the archive it just wrote:") //nolint:errcheck
+	for _, f := range gres.Findings {
+		fmt.Fprintf(stderr, "  [%s/%s] %s\n", f.Check, f.Kind, f.Message) //nolint:errcheck
+	}
+	return &exitError{
+		err:  fmt.Errorf("archive: post-archive guard self-check found %d problem(s) — see above", len(gres.Findings)),
+		code: archiveExitCouldNotRun,
+	}
 }
 
 func mapArchiveError(err error) error {

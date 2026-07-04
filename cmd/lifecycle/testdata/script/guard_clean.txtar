@@ -1,0 +1,59 @@
+# Clean baseline: a single feature archive (conformance-corpus case
+# 01-add-empty-capability), then `lifecycle guard` reports zero findings
+# in both text and JSON form. This is also implicitly exercised by every
+# other archive_*.txtar script (archive.go now runs the full guard as a
+# post-archive self-check, plan §2.5 step 5) — this script asserts it
+# directly, standalone.
+
+env HOME=/no-home
+
+exec lifecycle archive 001-add-password-login
+exec lifecycle guard
+stdout 'guard: clean \(1 change\(s\), 1 ledger record\(s\) checked\)'
+
+exec lifecycle guard --format json
+stdout '"findings": \[\]'
+stdout '"changesChecked": 1'
+stdout '"recordsChecked": 1'
+stdout '"findings": 0'
+stdout '"clean": true'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-password-login/proposal.md --
+# Add password login
+
+## Why
+The `auth` capability does not yet exist. Users need a way to authenticate
+with a username and password before any session-based features can be built.
+
+-- openspec/changes/001-add-password-login/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/001-add-password-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-password-login",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}

@@ -35,6 +35,26 @@ func hashFile(path string) (string, error) {
 // the empty byte string, computed once here rather than hand-typed.
 var emptyImageSHA = hashBytes(nil)
 
+// EmptyImageSHA is the exported form of emptyImageSHA: internal/guard's
+// digest-chain check (spec-lifecycle.md §6.3, implementation-plan.md §2.4
+// item 2) needs the SAME sentinel — a first ledger record's preImageSha,
+// and a capability with no live spec.md yet, are both checked against this
+// value — and the task's own instruction is "REUSE its record types,
+// manifest algorithm, and readers; do not duplicate or re-derive hashing".
+// Exported rather than recomputed so the two packages can never define the
+// sentinel two different ways.
+var EmptyImageSHA = emptyImageSHA
+
+// HashFile is the exported form of hashFile, for the same cross-package
+// reuse reason as EmptyImageSHA above (internal/guard hashes live
+// openspec/specs/<cap>/spec.md files with the exact algorithm archive
+// itself used to produce postImageSha at fold time).
+func HashFile(path string) (string, error) { return hashFile(path) }
+
+// HashBytes is the exported form of hashBytes, for the same cross-package
+// reuse reason as EmptyImageSHA/HashFile above.
+func HashBytes(data []byte) string { return hashBytes(data) }
+
 // ManifestSHA content-hashes every regular file under dir (recursively)
 // into a single digest: a sorted, slash-separated "relpath\tsha256\n"
 // manifest, then hashBytes of that joined manifest. Deterministic across
