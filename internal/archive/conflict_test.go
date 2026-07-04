@@ -3,11 +3,11 @@ package archive
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/kentra-io/spec-lifecycle/internal/spec"
+	"github.com/kentra-io/spec-lifecycle/internal/testutil"
 )
 
 // --- checkConflicts ---
@@ -24,6 +24,8 @@ func TestCheckConflictsNoChangesDirYieldsNilNotError(t *testing.T) {
 }
 
 func TestCheckConflictsPropagatesNonNotExistReadDirError(t *testing.T) {
+	testutil.SkipUnlessUnixFSErrors(t)
+
 	root := t.TempDir()
 	// openspec/changes is a regular file, not a directory.
 	changesRoot := filepath.Join(root, "openspec", "changes")
@@ -54,12 +56,7 @@ func TestCheckConflictsSkipsCapabilityThisChangeDoesNotTouch(t *testing.T) {
 }
 
 func TestCheckConflictsWarnsWithoutFailingOnUnreadableSiblingDelta(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("windows: chmod 0o000 does not make files unreadable")
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: permission checks are bypassed")
-	}
+	testutil.SkipUnlessPermissionEnforcement(t)
 
 	root := t.TempDir()
 	other := filepath.Join(root, "openspec", "changes", "200-other")

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/kentra-io/spec-lifecycle/internal/approve"
+	"github.com/kentra-io/spec-lifecycle/internal/testutil"
 )
 
 // --- fixtures / helpers ---
@@ -564,12 +564,7 @@ The system SHALL allow legacy token login.
 // "no live spec yet" while still failing the write phase's temp-file
 // creation, isolating the failure to exactly the phase this test targets.
 func TestArchiveGroupWriteFailureLeavesNoLiveSpecsMutated(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("windows: directory write-permission bits are not enforced the same way")
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: permission checks are bypassed")
-	}
+	testutil.SkipUnlessPermissionEnforcement(t)
 
 	root := newProjectRoot(t)
 	changeDir := filepath.Join(root, "openspec", "changes", "300-two-caps")

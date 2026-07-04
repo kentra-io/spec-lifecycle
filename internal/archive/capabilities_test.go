@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kentra-io/spec-lifecycle/internal/testutil"
 )
 
 // --- discoverCapabilities ---
@@ -20,6 +22,8 @@ func TestDiscoverCapabilitiesNoSpecsDirYieldsNilNotError(t *testing.T) {
 }
 
 func TestDiscoverCapabilitiesPropagatesNonNotExistReadDirError(t *testing.T) {
+	testutil.SkipUnlessUnixFSErrors(t)
+
 	changeDir := t.TempDir()
 	// changeDir/specs is a regular file, not a directory: os.ReadDir on it
 	// fails with a real (non-IsNotExist) error.

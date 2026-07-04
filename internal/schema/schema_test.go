@@ -3,10 +3,11 @@ package schema
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/kentra-io/spec-lifecycle/internal/testutil"
 )
 
 func TestInstallWritesExpectedTree(t *testing.T) {
@@ -147,12 +148,7 @@ func TestInstallFailsWhenParentPathIsNotADirectory(t *testing.T) {
 // exists) but the directory lacks write permission, so creating the
 // temp file for the atomic write fails.
 func TestInstallFailsWhenRootDirIsReadOnly(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("windows: directory write bits are not enforced")
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: permission checks are bypassed")
-	}
+	testutil.SkipUnlessPermissionEnforcement(t)
 	dir := t.TempDir()
 	root := Dir(dir)
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -172,12 +168,7 @@ func TestInstallFailsWhenRootDirIsReadOnly(t *testing.T) {
 // branch for a read failure that is not "file does not exist" — e.g. a
 // permission error on an installed-but-unreadable file.
 func TestVerifyPropagatesNonNotExistReadError(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("windows: chmod 0o000 does not make files unreadable")
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: permission checks are bypassed")
-	}
+	testutil.SkipUnlessPermissionEnforcement(t)
 	dir := t.TempDir()
 	if err := Install(dir); err != nil {
 		t.Fatalf("Install: %v", err)
