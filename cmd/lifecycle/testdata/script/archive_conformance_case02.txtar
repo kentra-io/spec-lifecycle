@@ -1,0 +1,128 @@
+# Full feature archive, replaying conformance-corpus case
+# 02-add-to-existing (testdata/conformance): an ADDED requirement folded
+# into an ALREADY-EXISTING capability spec.md (a real preImageSha, not the
+# empty-image sentinel). Fixture bytes below (before-auth-spec.md,
+# change/proposal.md, change/specs/auth/spec.md, want-auth-spec.md) are
+# byte-identical copies of the corpus case's before/, change/, and
+# expected/ content.
+
+env HOME=/no-home
+
+exec lifecycle archive 002-add-mfa
+stdout 'seq 1  auth'
+
+cmp openspec/specs/auth/spec.md want-auth-spec.md
+
+grep '"op":"ADDED","requirement":"Multi-factor authentication"' openspec/ledger.jsonl
+! grep '"preImageSha":"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"' openspec/ledger.jsonl
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/specs/auth/spec.md --
+# auth Specification
+
+## Purpose
+Authentication and session management for the product.
+
+## Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+### Requirement: Session expiry
+The system SHALL expire an authenticated session after 24 hours of inactivity.
+
+#### Scenario: Session expires after inactivity
+- **GIVEN** an authenticated session with no activity for 24 hours
+- **WHEN** the user makes a new request
+- **THEN** the system SHALL require re-authentication
+
+-- openspec/changes/002-add-mfa/proposal.md --
+# Add multi-factor authentication
+
+## Why
+Password-only login is insufficient for higher-security accounts.
+
+## What Changes
+- **auth:** ADDED - a second authentication factor requirement.
+
+## Impact
+- Extends the existing `auth` capability; no other capabilities affected.
+
+-- openspec/changes/002-add-mfa/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Multi-factor authentication
+The system SHALL require a second authentication factor when MFA is enabled for an account.
+
+#### Scenario: Login requires second factor when MFA is enabled
+- **GIVEN** a user account with MFA enabled
+- **WHEN** the user submits a correct username and password
+- **THEN** the system SHALL prompt for a second factor before granting a session
+
+-- openspec/changes/002-add-mfa/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "002-add-mfa",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine",
+      "status": "approved",
+      "designSkipped": true,
+      "artifacts": {},
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "test",
+      "approvedAt": "2026-07-04T00:00:00Z",
+      "notes": ""
+    },
+    {
+      "stage": "plan",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {},
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "test",
+      "approvedAt": "2026-07-04T00:01:00Z",
+      "notes": ""
+    }
+  ]
+}
+
+-- want-auth-spec.md --
+# auth Specification
+
+## Purpose
+Authentication and session management for the product.
+## Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+### Requirement: Session expiry
+The system SHALL expire an authenticated session after 24 hours of inactivity.
+
+#### Scenario: Session expires after inactivity
+- **GIVEN** an authenticated session with no activity for 24 hours
+- **WHEN** the user makes a new request
+- **THEN** the system SHALL require re-authentication
+
+### Requirement: Multi-factor authentication
+The system SHALL require a second authentication factor when MFA is enabled for an account.
+
+#### Scenario: Login requires second factor when MFA is enabled
+- **GIVEN** a user account with MFA enabled
+- **WHEN** the user submits a correct username and password
+- **THEN** the system SHALL prompt for a second factor before granting a session
+

@@ -1,0 +1,122 @@
+# Two in-flight changes MODIFY the same requirement in the same
+# capability: archiving either one is refused with a loud conflict
+# message (exit 1), by construction (internal/spec.ParseDelta over the
+# OTHER change's delta) — no silent scenario-loss (contrast OpenSpec
+# #1246). --force-conflicts overrides, recorded on the ledger record.
+
+env HOME=/no-home
+
+exitcode 1 lifecycle archive 100-change-a
+stderr 'refused — a conflicting in-flight change touches the same requirement'
+stderr 'Password login'
+stderr '200-change-b'
+
+exec lifecycle archive --force-conflicts 100-change-a
+stderr 'warning: conflict check overridden'
+
+grep '"conflictsOverridden":true' openspec/ledger.jsonl
+
+# B is no longer conflicting (A already archived) and archives clean,
+# folding on top of A's already-updated live spec — seq keeps advancing.
+exec lifecycle archive 200-change-b
+stdout 'seq 2'
+grep '"seq":2' openspec/ledger.jsonl
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/specs/auth/spec.md --
+# auth Specification
+
+## Purpose
+Authentication.
+
+## Requirements
+### Requirement: Password login
+The system SHALL allow login.
+
+#### Scenario: Successful login
+- **GIVEN** a user
+- **WHEN** they log in
+- **THEN** the system SHALL grant a session
+
+-- openspec/changes/100-change-a/proposal.md --
+---
+issue: "kentra-io/kafka-dq#100"
+---
+
+# Change A
+
+## Why
+Tweak login behavior (A).
+
+-- openspec/changes/100-change-a/specs/auth/spec.md --
+## MODIFIED Requirements
+
+### Requirement: Password login
+The system SHALL allow login via A.
+
+#### Scenario: Successful login A
+- **GIVEN** a user
+- **WHEN** they log in
+- **THEN** the system SHALL grant a session
+
+-- openspec/changes/100-change-a/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "100-change-a",
+  "issue": "kentra-io/kafka-dq#100",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
+
+-- openspec/changes/200-change-b/proposal.md --
+---
+issue: "kentra-io/kafka-dq#200"
+---
+
+# Change B
+
+## Why
+Tweak login behavior (B).
+
+-- openspec/changes/200-change-b/specs/auth/spec.md --
+## MODIFIED Requirements
+
+### Requirement: Password login
+The system SHALL allow login via B.
+
+#### Scenario: Successful login B
+- **GIVEN** a user
+- **WHEN** they log in
+- **THEN** the system SHALL grant a session
+
+-- openspec/changes/200-change-b/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "200-change-b",
+  "issue": "kentra-io/kafka-dq#200",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}

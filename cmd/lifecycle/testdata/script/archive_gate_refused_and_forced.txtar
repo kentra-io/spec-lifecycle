@@ -1,0 +1,51 @@
+# `lifecycle archive` refuses by default when a required gate is not
+# approved (exit 1) — internal/archive/doc.go's "soft in Phase 1" reading:
+# archive itself defaults to a hard local refusal, mirroring `approve`'s
+# own consentPolicy:strict default posture, with an explicit
+# --force-gates escape hatch that is recorded (never silent) on the
+# resulting ledger record.
+
+env HOME=/no-home
+
+exitcode 1 lifecycle archive 001-add-login
+stderr 'refused — required gate\(s\) not approved'
+! exists openspec/changes/archive/001-add-login
+! exists openspec/ledger.jsonl
+
+exec lifecycle archive --force-gates 001-add-login
+stderr 'warning: gate check overridden'
+stdout 'archived "001-add-login"'
+
+exists openspec/changes/archive/001-add-login
+grep '"gatesOverridden":true' openspec/ledger.jsonl
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-login/proposal.md --
+---
+issue: "kentra-io/kafka-dq#1"
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/001-add-login/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session

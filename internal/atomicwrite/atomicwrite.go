@@ -43,43 +43,96 @@ import (
 // cross-device rename is not atomic and would fall back to copy). On any
 // error before the move, the temp file is removed and path is left
 // untouched.
-func WriteFile(path string, data []byte, perm os.FileMode) (err error) {
+//
+// WriteFile is Prepare followed immediately by Commit — see those for the
+// two-phase form a caller writing several files as one all-or-nothing
+// group (e.g. internal/archive's multi-capability fold) needs instead of
+// this single-file convenience wrapper.
+func WriteFile(path string, data []byte, perm os.FileMode) error {
+	w, err := Prepare(path, data, perm)
+	if err != nil {
+		return err
+	}
+	if err := w.Commit(); err != nil {
+		w.Discard()
+		return err
+	}
+	return nil
+}
+
+// PreparedWrite is data staged by Prepare in a temp file, not yet visible
+// at its final path until Commit moves it there.
+type PreparedWrite struct {
+	tmp  string
+	path string
+}
+
+// Prepare stages data for an eventual atomic replace of path: it writes,
+// flushes, and closes a temp file in filepath.Dir(path) (the same
+// same-filesystem placement WriteFile uses) but does NOT move it into
+// place. Splitting "do the (possibly failing) work" from "make it visible"
+// lets a caller Prepare N files, and only Commit any of them once every one
+// of the N has Prepared successfully — composing WriteFile's single-file
+// atomicity into a multi-file group where a failure at Prepare time (the
+// expensive, failure-prone part: allocating space, writing, flushing)
+// leaves every target path untouched, not just the one that failed.
+func Prepare(path string, data []byte, perm os.FileMode) (w *PreparedWrite, err error) {
 	dir := filepath.Dir(path)
 
 	f, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("atomicwrite: create temp file in %s: %w", dir, err)
+		return nil, fmt.Errorf("atomicwrite: create temp file in %s: %w", dir, err)
 	}
 	tmp := f.Name()
 
-	// Remove the temp file unless we hand it off via a successful move.
+	// Remove the temp file unless we hand it off via a successful Prepare.
 	// Guards every early-return error path below.
+	ok := false
 	defer func() {
-		if tmp != "" {
+		if !ok {
 			_ = os.Remove(tmp)
 		}
 	}()
 
 	if _, err := f.Write(data); err != nil {
 		_ = f.Close()
-		return fmt.Errorf("atomicwrite: write temp file: %w", err)
+		return nil, fmt.Errorf("atomicwrite: write temp file: %w", err)
 	}
 	// Flush to disk before the rename so the moved-into-place file has
 	// durable contents even if the machine loses power right after.
 	if err := f.Sync(); err != nil {
 		_ = f.Close()
-		return fmt.Errorf("atomicwrite: sync temp file: %w", err)
+		return nil, fmt.Errorf("atomicwrite: sync temp file: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		return fmt.Errorf("atomicwrite: close temp file: %w", err)
+		return nil, fmt.Errorf("atomicwrite: close temp file: %w", err)
 	}
 	if err := os.Chmod(tmp, perm); err != nil {
-		return fmt.Errorf("atomicwrite: chmod temp file: %w", err)
+		return nil, fmt.Errorf("atomicwrite: chmod temp file: %w", err)
 	}
 
-	if err := replace(tmp, path); err != nil {
-		return fmt.Errorf("atomicwrite: replace %s: %w", path, err)
+	ok = true
+	return &PreparedWrite{tmp: tmp, path: path}, nil
+}
+
+// Commit atomically moves w's staged content into place at w.path — the
+// same platform-specific replace WriteFile itself uses. Once Commit
+// returns nil, w must not be Discarded (its temp file no longer exists at
+// its staged path, so Discard would be a harmless no-op, but the pairing
+// is not meaningful after a successful Commit).
+func (w *PreparedWrite) Commit() error {
+	if err := replace(w.tmp, w.path); err != nil {
+		return fmt.Errorf("atomicwrite: replace %s: %w", w.path, err)
 	}
-	tmp = "" // handed off; the deferred cleanup must not delete it now
 	return nil
+}
+
+// Discard removes w's staged temp file without ever moving it into place —
+// the caller decided not to commit this write after all (e.g. a sibling
+// Prepare in the same all-or-nothing group failed, or this same
+// PreparedWrite's own Commit failed and left the temp file behind). Safe
+// to call after a successful Commit too (the temp file is simply already
+// gone; the os.Remove error is ignored).
+func (w *PreparedWrite) Discard() {
+	_ = os.Remove(w.tmp)
 }

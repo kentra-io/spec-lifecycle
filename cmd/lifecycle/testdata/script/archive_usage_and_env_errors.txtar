@@ -1,0 +1,32 @@
+# `lifecycle archive`'s "could not run at all" paths (exit 2): a bad
+# --format, no <change> argument, no openspec/ project root, and a
+# missing change folder.
+
+env HOME=/no-home
+
+exitcode 2 lifecycle archive --format xml 001-add-login
+stderr 'archive: --format must be "text" or "json"'
+
+exitcode 2 lifecycle archive
+stderr 'exactly one <change> argument is required'
+
+cd noopenspec
+exitcode 2 lifecycle archive 001-add-login
+stderr 'no openspec/ directory'
+cd ..
+
+exitcode 2 lifecycle archive does-not-exist
+stderr 'change "does-not-exist" not found'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-login/proposal.md --
+---
+issue: "kentra-io/kafka-dq#1"
+---
+
+# Add password login
+
+-- noopenspec/.keep --
