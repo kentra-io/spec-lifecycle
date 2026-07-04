@@ -4,9 +4,10 @@
 // implementation-plan.md §0.5/"Option B"). See spec-lifecycle.md in the
 // repo root for the design and implementation-plan.md for the build plan.
 //
-// M0 wired the binary skeleton and `--version` reporting. M2 (this
-// milestone) adds `validate` (plan §2.3/§4). The remaining verbs (init,
-// approve, status, archive, guard) land in later milestones (§8).
+// M0 wired the binary skeleton and `--version` reporting. M2 added
+// `validate` (plan §2.3/§4). M3 (this milestone) adds `approve` and
+// `status` (plan §2.6). The remaining verbs (init, archive, guard) land
+// in later milestones (§8).
 package main
 
 import (
@@ -31,9 +32,11 @@ func run(ctx context.Context, args []string) error {
 		Version: buildVersion(),
 		Commands: []*cli.Command{
 			validateCommand(),
+			approveCommand(),
+			statusCommand(),
 		},
-		// TODO(M3-M6): wire the remaining verbs (init, approve, status,
-		// archive, guard) here as they land — see implementation-plan.md §4/§8.
+		// TODO(M4-M6): wire the remaining verbs (init, archive, guard) here
+		// as they land — see implementation-plan.md §4/§8.
 	}
 	return cmd.Run(ctx, args)
 }

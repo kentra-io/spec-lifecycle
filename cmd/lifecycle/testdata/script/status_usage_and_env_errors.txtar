@@ -1,0 +1,39 @@
+# `lifecycle status`'s "could not run at all" paths (exit 2): a bad
+# --format, no openspec/ project root, and a named --change that doesn't
+# exist. A change folder with no gate records at all is still a
+# successful (exit 0) report — every stage pending, not an error.
+
+env HOME=/no-home
+
+exitcode 2 lifecycle status --format xml
+stderr 'status: --format must be "text" or "json"'
+
+exitcode 2 lifecycle status --change does-not-exist
+stderr 'change "does-not-exist" not found'
+
+cd noopenspec
+exitcode 2 lifecycle status
+stderr 'no openspec/ directory'
+cd ..
+
+exec lifecycle status --change 042-user-auth
+stdout '042-user-auth \(feature\)'
+stdout 'refine   pending'
+stdout 'design   pending'
+stdout 'plan     pending'
+
+exec lifecycle status
+stdout '042-user-auth \(feature\)'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+---
+
+# Add password login
+
+-- noopenspec/.keep --

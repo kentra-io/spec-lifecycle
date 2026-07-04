@@ -1,0 +1,51 @@
+# `lifecycle approve` under consentPolicy: strict (the default): refuses
+# without --approve on a non-interactive run (exit 1), succeeds with it.
+
+env HOME=/no-home
+
+exitcode 1 lifecycle approve --stage refine 042-user-auth
+stderr 'approve: refused'
+stderr 'strict'
+! exists openspec/changes/042-user-auth/approval-state.json
+
+exec lifecycle approve --stage refine --approve --approved-by jan 042-user-auth
+stdout 'approve: approved stage "refine" for 042-user-auth'
+exists openspec/changes/042-user-auth/approval-state.json
+stdout '\(2 artifact\(s\) hashed\)'
+
+exec lifecycle status --change 042-user-auth
+stdout 'refine   approved'
+stdout 'design   pending'
+stdout 'plan     pending'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: strict
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+designSkip: false
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session

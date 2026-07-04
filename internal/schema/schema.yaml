@@ -38,6 +38,12 @@ artifacts:
         (spec-lifecycle.md §3.2). The human approves or rejects the
         proposal at gate 1; the recorded decision lives in that gate's
         approval-state.json entry (`designSkipped`), not here.
+      - `type`: `feature` (default) or `bug` — the change type recorded at
+        intake (spec-lifecycle.md §8, §0's Stage glossary). `lifecycle
+        approve`/`status` key the bug-vs-feature gate set off this field,
+        not a fixed stage list (implementation-plan.md §2.11). A bug's
+        proposal.md carries the repro description + failing-test pointer
+        instead of Why/What Changes/Impact (spec-lifecycle.md §8).
 
       Body sections:
       - **Why** — 1-2 sentences: what problem does this solve, why now?

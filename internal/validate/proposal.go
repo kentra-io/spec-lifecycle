@@ -32,7 +32,7 @@ func validateProposal(dir string) ([]Finding, error) {
 		return nil, fmt.Errorf("validate: reading %s: %w", path, err)
 	}
 
-	fm, _, ok := splitFrontmatter(data)
+	fm, ok := splitFrontmatter(data)
 	if !ok {
 		return []Finding{{
 			File: path, Line: 1, Kind: "missing_frontmatter",

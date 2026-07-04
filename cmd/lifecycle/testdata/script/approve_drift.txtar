@@ -1,0 +1,66 @@
+# Post-gate artifact drift (spec-lifecycle.md §5/§6.2): editing an
+# artifact after its gate was approved is allowed, but `lifecycle status`
+# flags the drift by re-hashing against the recorded hash.
+
+env HOME=/no-home
+
+exec lifecycle approve --stage refine 042-user-auth
+exec lifecycle status --change 042-user-auth --format json
+! stdout 'drifted'
+
+mv edited-proposal.md openspec/changes/042-user-auth/proposal.md
+
+exec lifecycle status --change 042-user-auth --format json
+stdout '"stage": "refine"'
+stdout '"drifted"'
+stdout 'proposal.md'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+designSkip: false
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session
+
+-- edited-proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+designSkip: false
+---
+
+# Add password login (edited after approval)
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+- **auth:** ADDED - remember-me.
+
+## Impact
+- New capability: auth.

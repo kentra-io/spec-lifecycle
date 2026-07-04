@@ -1,0 +1,55 @@
+# `lifecycle approve`'s "could not run at all" paths (exit 2): missing
+# <change> argument, an unrecognized --stage, no openspec/ project root,
+# a missing change folder, and a design/plan gate with no
+# constitution binary available at all.
+
+env HOME=/no-home
+
+exitcode 2 lifecycle approve --stage refine
+stderr 'exactly one <change> argument is required'
+
+exitcode 2 lifecycle approve --stage bogus 042-user-auth
+stderr 'approve: --stage must be one of'
+
+exitcode 2 lifecycle approve --stage refine does-not-exist
+stderr 'change "does-not-exist" not found'
+
+cd noopenspec
+exitcode 2 lifecycle approve --stage refine 042-user-auth
+stderr 'no openspec/ directory'
+cd ..
+
+env LIFECYCLE_CONSTITUTION_BIN=/does/not/exist/constitution
+exitcode 2 lifecycle approve --stage design --approve 042-user-auth
+stderr 'requires the constitution binary'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/042-user-auth/design.md --
+# Add password login — Design
+
+## Context
+c
+
+## Goals / Non-Goals
+g
+
+## Decisions
+d
+
+## NFR Discharge
+none
+
+## ADR proposals
+none
+
+## Risks / Trade-offs
+none
+
+-- openspec/changes/042-user-auth/deviation.json --
+{"generatedAt":"2026-07-04T00:00:00Z","constitutionHash":"sha256:0000000000000000000000000000000000000000000000000000000000000000","plan":"design.md",
+ "deviations":[],"summary":{"critical":0,"high":0,"medium":0,"low":0}}
+
+-- noopenspec/.keep --

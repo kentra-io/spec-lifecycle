@@ -2,11 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -45,8 +51,121 @@ func TestScripts(t *testing.T) {
 			// the exact code (mirrors the sibling adr-sourced-constitution
 			// primitive's cmd/constitution/main_test.go).
 			"exitcode": cmdExitcode,
+			// injecthash <jsonfile> replaces the literal token __HASH__ in
+			// <jsonfile> with "sha256:<hex>" of constitution/constitution.md
+			// (relative to the script's working directory), so a
+			// deviation.json fixture's constitutionHash can be made to
+			// actually match the rendered projection without depending on a
+			// platform sha256 binary — verbatim mirror of the sibling
+			// adr-sourced-constitution primitive's own cmd/constitution/
+			// main_test.go helper of the same name, used by
+			// approve_design_gate_real_constitution.txtar.
+			"injecthash": cmdInjecthash,
+		},
+		// Setup/Condition wire the one testscript that exercises the REAL
+		// constitution binary (approve_design_gate_real_constitution.txtar,
+		// per implementation-plan.md M3's DoD: "at least one testscript
+		// must exercise the REAL constitution binary built from
+		// adr-sourced-constitution"). Every other script in this suite is
+		// hermetic (never needs "constitution" on PATH at all — they either
+		// stay at stage refine/repro/fix, which have no deviation-gate step,
+		// or use approve's own unit tests' fake-subprocess coverage for the
+		// deviation-gate LOGIC instead). Setup is harmless to run
+		// unconditionally: it only prepends a PATH entry when the real
+		// binary built successfully.
+		Setup: func(e *testscript.Env) error {
+			if dir, err := realConstitutionBinDir(); err == nil {
+				e.Setenv("PATH", dir+string(os.PathListSeparator)+e.Getenv("PATH"))
+			}
+			return nil
+		},
+		Condition: func(cond string) (bool, error) {
+			if cond != "realconstitution" {
+				return false, fmt.Errorf("unknown condition %q", cond)
+			}
+			_, err := realConstitutionBinDir()
+			return err == nil, nil
 		},
 	})
+}
+
+var (
+	realConstitutionOnce sync.Once
+	realConstitutionDir  string
+	realConstitutionErr  error
+)
+
+// realConstitutionBinDir builds the REAL constitution binary from the
+// sibling adr-sourced-constitution repo (harness AGENTS.md: both
+// primitives live side by side as submodules) exactly once per test run,
+// to a scratch directory outside that repo (never writing into it, per
+// this milestone's hard rule), and returns the directory holding it. A
+// non-nil error means the build was not possible in this environment
+// (the sibling repo isn't checked out, or `go build` failed) — every
+// script needing the real binary is written to skip with a clear reason
+// in that case ([!realconstitution] skip '...'), never to fail the suite.
+func realConstitutionBinDir() (string, error) {
+	realConstitutionOnce.Do(func() {
+		constDir := os.Getenv("LIFECYCLE_TEST_CONSTITUTION_REPO")
+		if constDir == "" {
+			_, thisFile, _, ok := runtime.Caller(0)
+			if !ok {
+				realConstitutionErr = fmt.Errorf("realConstitutionBinDir: runtime.Caller failed")
+				return
+			}
+			// thisFile: .../harness/spec-lifecycle/cmd/lifecycle/main_test.go
+			// -> up to .../harness, then into the sibling submodule.
+			harnessDir := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(thisFile))))
+			constDir = filepath.Join(harnessDir, "adr-sourced-constitution")
+		}
+		if _, err := os.Stat(filepath.Join(constDir, "go.mod")); err != nil {
+			realConstitutionErr = fmt.Errorf(
+				"adr-sourced-constitution sibling repo not found at %s (set LIFECYCLE_TEST_CONSTITUTION_REPO to override): %w",
+				constDir, err)
+			return
+		}
+
+		binDir, err := os.MkdirTemp("", "lifecycle-real-constitution-")
+		if err != nil {
+			realConstitutionErr = err
+			return
+		}
+		binPath := filepath.Join(binDir, "constitution")
+		if runtime.GOOS == "windows" {
+			binPath += ".exe"
+		}
+
+		cmd := exec.Command("go", "build", "-o", binPath, "./cmd/constitution")
+		cmd.Dir = constDir // building FROM the sibling repo, output OUTSIDE it — never writes there
+		if out, err := cmd.CombinedOutput(); err != nil {
+			realConstitutionErr = fmt.Errorf("building constitution from %s: %w: %s", constDir, err, out)
+			return
+		}
+		realConstitutionDir = binDir
+	})
+	return realConstitutionDir, realConstitutionErr
+}
+
+func cmdInjecthash(ts *testscript.TestScript, neg bool, args []string) {
+	if neg || len(args) != 1 {
+		ts.Fatalf("usage: injecthash <jsonfile>")
+	}
+	md, err := os.ReadFile(ts.MkAbs("constitution/constitution.md"))
+	if err != nil {
+		ts.Fatalf("injecthash: reading constitution.md: %v", err)
+	}
+	sum := sha256.Sum256(md)
+	hash := "sha256:" + hex.EncodeToString(sum[:])
+
+	target := ts.MkAbs(args[0])
+	data, err := os.ReadFile(target)
+	if err != nil {
+		ts.Fatalf("injecthash: reading %s: %v", args[0], err)
+	}
+	out := strings.ReplaceAll(string(data), "__HASH__", hash)
+	if err := os.WriteFile(target, []byte(out), 0o644); err != nil {
+		ts.Fatalf("injecthash: writing %s: %v", args[0], err)
+	}
 }
 
 func cmdExitcode(ts *testscript.TestScript, neg bool, args []string) {
