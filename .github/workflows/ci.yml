@@ -47,3 +47,19 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
+
+  self-guard:
+    # Dogfood (spec-lifecycle.md §2.13, implementation-plan.md M7/M9): this
+    # repo plans itself via its own openspec/ tree. Build the binary fresh
+    # in-job (no released artifact assumed) and guard the repo's own
+    # archive ledger + living spec for drift on every PR — the same
+    # from-empty-replay/digest-chain/immutability check any adopting repo
+    # would run in its own CI (spec-lifecycle.md §6.3).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+      - run: go build -o /tmp/lifecycle ./cmd/lifecycle
+      - run: /tmp/lifecycle guard
