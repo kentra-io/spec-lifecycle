@@ -1,0 +1,18 @@
+# Build output. A local `go build -o lifecycle ./cmd/lifecycle` (or its
+# Windows .exe form) drops a binary at the repo root; ignore both.
+/lifecycle
+/lifecycle.exe
+/dist/
+
+# Go test/coverage artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# testscript scratch dirs (created under $WORK, but guard against accidents)
+/testdata/*.tmp
+
+# Editors / OS
+.DS_Store
+*.swp

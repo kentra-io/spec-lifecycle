@@ -1,0 +1,125 @@
+# GoReleaser v2 configuration for the `lifecycle` CLI.
+# Schema: https://goreleaser.com/customization/  (validated against goreleaser v2.17).
+#
+# Release flow (see docs/releasing.md): push a `vX.Y.Z` tag -> the release
+# workflow (.github/workflows/release.yml) runs `goreleaser release`, which
+# builds all targets, publishes a GitHub Release with archives + checksums,
+# and pushes a Homebrew cask to kentra-io/homebrew-tap (the second cask in
+# that tap, alongside `constitution`).
+#
+# Local dry run (no publish, builds every target):
+#   goreleaser release --snapshot --clean --skip=publish
+version: 2
+
+# project_name drives the binary name, archive names, and cask name. It is set
+# to `lifecycle` (NOT the repo name `spec-lifecycle`) so the
+# `go install .../cmd/lifecycle` binary, the brew cask, and the release
+# assets all share the one user-facing name. This is what makes the documented
+# asset URL be `lifecycle_<version>_linux_amd64.tar.gz` (docs/releasing.md).
+project_name: lifecycle
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: lifecycle
+    main: ./cmd/lifecycle
+    binary: lifecycle
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # -trimpath strips local filesystem paths from the binary for reproducible,
+    # leak-free builds.
+    flags:
+      - -trimpath
+    # -s -w drop the symbol table and DWARF debug info (smaller binary). The
+    # -X flags inject the version metadata into package main's build-time vars
+    # (cmd/lifecycle/version.go) so a released binary's `--version` reports
+    # its tag, commit, and build date instead of falling back to ReadBuildInfo.
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .CommitDate }}
+    # Pin archive/binary mtimes to the commit timestamp for reproducible builds.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: lifecycle
+    ids:
+      - lifecycle
+    # Produces e.g. lifecycle_0.1.0_linux_amd64.tar.gz — the exact asset name
+    # the claudebox install snippet (docs/releasing.md) depends on. Keep this in
+    # sync with that doc: {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}.
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    # Windows users expect .zip.
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+homebrew_casks:
+  - name: lifecycle
+    binaries:
+      - lifecycle
+    homepage: "https://github.com/kentra-io/spec-lifecycle"
+    description: "Staged, gated OpenSpec-format change lifecycle — single static Go binary, no Node/OpenSpec runtime"
+    license: "MIT"
+    # The cask is published to the kentra-io/homebrew-tap repo. GoReleaser needs
+    # a cross-repo token here: the default GITHUB_TOKEN is scoped to THIS repo
+    # only and cannot push to the tap. HOMEBREW_TAP_TOKEN is an org-level
+    # secret (implementation-plan.md §10.4 — promoted from the constitution's
+    # per-repo secret so more primitives can share it) wired through in
+    # .github/workflows/release.yml. It already exists at the org level by the
+    # time this repo cuts its first release; nothing to provision here.
+    repository:
+      owner: kentra-io
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    # Prerelease tags (e.g. v0.1.0-rc1) must NOT overwrite the stable cask in the
+    # tap. "auto" skips the cask upload whenever the version is a prerelease
+    # (SemVer with a hyphen), so an -rc/-beta build still produces a GitHub
+    # Release + archives but leaves the published formula pointing at the last
+    # stable version. skip_upload only affects publish; the build is unaffected.
+    skip_upload: "auto"
+    # The binary is not code-signed / notarized, so macOS Gatekeeper quarantines
+    # it. Strip the quarantine attribute on install so `lifecycle` runs without
+    # a manual "allow anyway" trip through System Settings.
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/lifecycle"]
+          end
+
+release:
+  # Draft/prerelease handling: publish a normal release; mark prereleases
+  # automatically from tags like v1.2.3-rc1.
+  prerelease: auto
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
