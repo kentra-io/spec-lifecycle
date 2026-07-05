@@ -73,6 +73,30 @@ func splitPin(pin string) []string {
 	return out
 }
 
+func TestMinorPin(t *testing.T) {
+	tests := []struct {
+		in     string
+		want   string
+		wantOk bool
+	}{
+		{"0.3.2", "0.3.x", true},
+		{"v1.2.0-rc1 (abcdef012345)", "1.2.x", true},
+		{"0.1.5 (abcdef012345)", "0.1.x", true},
+		{"(devel) (7e24d2aee640-dirty)", "", false},
+		{"5", "", false}, // only one numeric component — not enough for major.minor
+	}
+	for _, tt := range tests {
+		got, ok := MinorPin(tt.in)
+		if ok != tt.wantOk {
+			t.Errorf("MinorPin(%q) ok = %v, want %v", tt.in, ok, tt.wantOk)
+			continue
+		}
+		if ok && got != tt.want {
+			t.Errorf("MinorPin(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestCheckVersion(t *testing.T) {
 	tests := []struct {
 		name           string

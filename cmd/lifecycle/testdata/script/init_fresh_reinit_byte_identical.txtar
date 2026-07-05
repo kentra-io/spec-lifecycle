@@ -1,0 +1,106 @@
+# `lifecycle init` on an empty repo yields a working setup end to end
+# (implementation-plan.md §2.9/§4, M6 DoD in implementation-plan.md §8):
+# the full compose runs, the scaffolded project is immediately usable
+# (`lifecycle validate` is clean against a template-shaped change dropped
+# in afterward), and a second `init` run is byte-identical — proven with
+# hashtree/cmp rather than a hand-picked file list, so nothing the compose
+# writes escapes the idempotence check. Deliberately says nothing about
+# whether a `constitution` binary is on PATH (see init_constitution_
+# preflight.txtar for that) — the DoD holds either way.
+
+exec lifecycle init
+stdout 'init: spec-lifecycle project ready'
+stdout 'created openspec'
+stdout 'wrote.*kentra-spec-lifecycle'
+stdout 'wrote.*config\.yaml'
+stdout 'wrote lifecycle\.yml'
+stdout 'fanned out skills and managed pointer blocks'
+
+exists openspec/changes
+exists openspec/specs
+exists openspec/schemas/kentra-spec-lifecycle/schema.yaml
+exists openspec/schemas/kentra-spec-lifecycle/templates/proposal.md
+exists openspec/config.yaml
+exists lifecycle.yml
+exists CLAUDE.md
+exists AGENTS.md
+grep 'BEGIN spec-lifecycle v1' CLAUDE.md
+grep 'BEGIN spec-lifecycle v1' AGENTS.md
+grep 'schema: kentra-spec-lifecycle' openspec/config.yaml
+
+# Ownership line (implementation-plan.md §2.9): `lifecycle` owns the whole
+# openspec/ tree, lifecycle.yml, every approval-state.json, and the
+# archive ledger — nothing else writes there. `init` is the one verb that
+# creates that ownership; its own --help documents the line.
+exec lifecycle init --help
+stdout 'openspec/config\.yaml'
+stdout 'lifecycle\.yml'
+stdout 'Ownership'
+stdout 'owns the entire'
+stdout 'approval-state\.json'
+stdout 'archive ledger'
+
+exists .claude/skills/lifecycle-refine/SKILL.md
+exists .claude/skills/lifecycle-design/SKILL.md
+exists .claude/skills/lifecycle-plan/SKILL.md
+exists .claude/skills/lifecycle-bug/SKILL.md
+exists .claude/skills/lifecycle-archive/SKILL.md
+exists .agents/skills/lifecycle-refine/SKILL.md
+exists .agents/skills/lifecycle-design/SKILL.md
+exists .agents/skills/lifecycle-plan/SKILL.md
+exists .agents/skills/lifecycle-bug/SKILL.md
+exists .agents/skills/lifecycle-archive/SKILL.md
+exists .cursor/skills/lifecycle-refine/SKILL.md
+exists .cursor/skills/lifecycle-design/SKILL.md
+exists .cursor/skills/lifecycle-plan/SKILL.md
+exists .cursor/skills/lifecycle-bug/SKILL.md
+exists .cursor/skills/lifecycle-archive/SKILL.md
+
+# The scaffold is immediately usable: drop in a proposal + specs delta
+# shaped exactly like the installed schema descriptor's own templates
+# (openspec/schemas/kentra-spec-lifecycle/templates/{proposal,spec}.md)
+# and confirm `lifecycle validate` is clean against it.
+mkdir openspec/changes/001-add-password-login/specs/auth
+cp fixtures/proposal.md openspec/changes/001-add-password-login/proposal.md
+cp fixtures/spec.md openspec/changes/001-add-password-login/specs/auth/spec.md
+
+exec lifecycle validate --stage refine
+stdout '001-add-password-login: ok'
+stdout 'validate: 1 change\(s\), 0 error\(s\), 0 warning\(s\)'
+! stderr .
+
+# A second `init` run — nothing changed on disk in between — reconciles
+# to exactly the same bytes everywhere (M6 DoD: "re-run is byte-identical").
+hashtree before.snapshot
+exec lifecycle init
+stdout 'init: spec-lifecycle project ready'
+hashtree after.snapshot
+cmp before.snapshot after.snapshot
+
+-- fixtures/proposal.md --
+---
+issue: "kentra-io/kafka-dq#1"
+designSkip: false
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- fixtures/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session

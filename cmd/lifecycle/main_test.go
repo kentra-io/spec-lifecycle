@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,6 +63,17 @@ func TestScripts(t *testing.T) {
 			// main_test.go helper of the same name, used by
 			// approve_design_gate_real_constitution.txtar.
 			"injecthash": cmdInjecthash,
+			// hashtree <outfile> walks the whole script working directory and
+			// writes one "<relpath> <sha256-hex>\n" line per file (sorted by
+			// path, skipping any *.snapshot file — including <outfile> itself
+			// — so snapshots never see their own or a sibling snapshot's
+			// bytes) to <outfile>. Two snapshots taken before/after a second
+			// `lifecycle init` run are then diffed with the builtin `cmp`,
+			// which is how init_fresh_reinit_byte_identical.txtar proves a
+			// re-run is byte-identical (implementation-plan.md §8 M6 DoD)
+			// without testscript's `cp` (files-only, no recursive directory
+			// copy) needing to snapshot the whole tree itself.
+			"hashtree": cmdHashtree,
 			// tamperledger <seq> <field> <value> rewrites ONE JSON field on
 			// the openspec/ledger.jsonl record whose "seq" equals <seq>, in
 			// place — used by guard_chain_break.txtar to simulate exactly the
@@ -219,6 +231,44 @@ func cmdTamperledger(ts *testscript.TestScript, neg bool, args []string) {
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
 		ts.Fatalf("tamperledger: writing %s: %v", path, err)
+	}
+}
+
+func cmdHashtree(ts *testscript.TestScript, neg bool, args []string) {
+	if neg || len(args) != 1 {
+		ts.Fatalf("usage: hashtree <outfile>")
+	}
+	root := ts.MkAbs(".")
+	var lines []string
+	err := filepath.Walk(root, func(p string, info os.FileInfo, werr error) error {
+		if werr != nil {
+			return werr
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if strings.HasSuffix(p, ".snapshot") {
+			return nil
+		}
+		rel, rerr := filepath.Rel(root, p)
+		if rerr != nil {
+			return rerr
+		}
+		data, rerr := os.ReadFile(p)
+		if rerr != nil {
+			return rerr
+		}
+		sum := sha256.Sum256(data)
+		lines = append(lines, fmt.Sprintf("%s %s", filepath.ToSlash(rel), hex.EncodeToString(sum[:])))
+		return nil
+	})
+	if err != nil {
+		ts.Fatalf("hashtree: %v", err)
+	}
+	sort.Strings(lines)
+	out := strings.Join(lines, "\n") + "\n"
+	if werr := os.WriteFile(ts.MkAbs(args[0]), []byte(out), 0o644); werr != nil {
+		ts.Fatalf("hashtree: writing %s: %v", args[0], werr)
 	}
 }
 

@@ -113,6 +113,11 @@ func TestLoadInvalid(t *testing.T) {
 			content: "schemaVersion: 1\nsourceTracking: { type: trello }\n",
 			wantErr: `field "sourceTracking.type": must be one of "github-issue", "generic", "jira", "none" (got "trello")`,
 		},
+		{
+			name:    "bad runtime",
+			content: "schemaVersion: 1\nruntimes: [claude-code, gemini-cli]\n",
+			wantErr: `field "runtimes": unknown runtime "gemini-cli" (allowed: "claude-code", "cursor", "codex")`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -126,5 +131,52 @@ func TestLoadInvalid(t *testing.T) {
 				t.Errorf("Load() error = %q, want it to contain %q", err.Error(), tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestDefault(t *testing.T) {
+	cfg := Default()
+	path := filepath.Join(t.TempDir(), "lifecycle.yml")
+	if err := cfg.Validate(path); err != nil {
+		t.Fatalf("Default() failed its own Validate: %v", err)
+	}
+	if cfg.SchemaVersion != SchemaVersion {
+		t.Errorf("SchemaVersion = %d, want %d", cfg.SchemaVersion, SchemaVersion)
+	}
+	if cfg.ConsentPolicy != ConsentStrict {
+		t.Errorf("ConsentPolicy = %q, want %q", cfg.ConsentPolicy, ConsentStrict)
+	}
+	if cfg.SpecFormat.Convention != ConventionOpenSpec || cfg.SpecFormat.Grammar != "1.5.0" {
+		t.Errorf("SpecFormat = %+v", cfg.SpecFormat)
+	}
+	if len(cfg.Runtimes) != 3 {
+		t.Errorf("Runtimes = %v, want 3 defaults", cfg.Runtimes)
+	}
+	if cfg.SourceTracking.Type != SourceTrackingNone {
+		t.Errorf("SourceTracking.Type = %q, want %q", cfg.SourceTracking.Type, SourceTrackingNone)
+	}
+}
+
+func TestSaveThenLoadRoundTrips(t *testing.T) {
+	cfg := Default()
+	cfg.Constitution.Version = "0.2.x"
+	cfg.SourceTracking.Repo = "kentra-io/kafka-dq"
+	path := filepath.Join(t.TempDir(), "lifecycle.yml")
+
+	if err := Save(path, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	got, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got.Constitution.Version != "0.2.x" {
+		t.Errorf("Constitution.Version = %q, want 0.2.x", got.Constitution.Version)
+	}
+	if got.SourceTracking.Repo != "kentra-io/kafka-dq" {
+		t.Errorf("SourceTracking.Repo = %q, want kentra-io/kafka-dq", got.SourceTracking.Repo)
+	}
+	if len(got.Runtimes) != 3 {
+		t.Errorf("Runtimes = %v, want 3 entries to survive the round-trip", got.Runtimes)
 	}
 }

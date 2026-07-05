@@ -13,6 +13,8 @@ import (
 	"os"
 
 	yaml "go.yaml.in/yaml/v3"
+
+	"github.com/kentra-io/spec-lifecycle/internal/atomicwrite"
 )
 
 // SchemaVersion is the only schemaVersion this build understands.
@@ -43,6 +45,27 @@ const (
 	SourceTrackingJira        = "jira"
 	SourceTrackingNone        = "none"
 )
+
+// Runtimes vocabulary (spec-lifecycle.md §9.2/§10): the skill fan-out
+// targets `lifecycle init` maps to trees (internal/scaffold.BuildSkillItems)
+// — claude-code → .claude/skills/, cursor → .cursor/skills/, codex →
+// .agents/skills/ (the cross-agent AGENTS.md convention). Gemini CLI was
+// dropped from the default list (Google EOL'd it 2026-06-18, §10).
+const (
+	RuntimeClaudeCode = "claude-code"
+	RuntimeCursor     = "cursor"
+	RuntimeCodex      = "codex"
+)
+
+// DefaultRuntimes is the fan-out target list `lifecycle init` seeds a fresh
+// lifecycle.yml with (spec-lifecycle.md §10 example).
+var DefaultRuntimes = []string{RuntimeClaudeCode, RuntimeCursor, RuntimeCodex}
+
+var validRuntimes = map[string]bool{
+	RuntimeClaudeCode: true,
+	RuntimeCursor:     true,
+	RuntimeCodex:      true,
+}
 
 // Config is the lifecycle.yml schema (spec-lifecycle.md §10).
 type Config struct {
@@ -120,6 +143,18 @@ func Load(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// Validate checks c against this build's schema (the same rules Load
+// applies to a just-read file), applying the same fill-in-the-default
+// normalization for empty optional fields. path is used only to word
+// error messages consistently with Load's. Exported so `lifecycle init`
+// (internal/scaffold) can validate an in-memory config it composed from
+// flags/defaults BEFORE writing it to disk (implementation-plan.md §2.9
+// step e), mirroring the constitution's own init.go pre-flight-before-
+// persist discipline.
+func (c *Config) Validate(path string) error {
+	return c.validate(path)
+}
+
 func (c *Config) validate(path string) error {
 	if c.SchemaVersion != SchemaVersion {
 		return fmt.Errorf(
@@ -162,5 +197,44 @@ func (c *Config) validate(path string) error {
 		)
 	}
 
+	for _, r := range c.Runtimes {
+		if !validRuntimes[r] {
+			return fmt.Errorf(
+				"%s: field %q: unknown runtime %q (allowed: %q, %q, %q)",
+				path, "runtimes", r, RuntimeClaudeCode, RuntimeCursor, RuntimeCodex,
+			)
+		}
+	}
+
 	return nil
+}
+
+// Default returns the lifecycle.yml `lifecycle init` seeds a project with
+// when none exists yet (spec-lifecycle.md §10's example, minus the
+// project-specific sourceTracking.repo and constitution.version, which the
+// caller fills in — the detected constitution version pin, resp. any
+// --source-repo/--source-type the human supplied).
+func Default() *Config {
+	return &Config{
+		SchemaVersion:   SchemaVersion,
+		SpecFormat:      SpecFormat{Convention: ConventionOpenSpec, Grammar: "1.5.0"},
+		ConsentPolicy:   ConsentStrict,
+		PlanGranularity: "medium",
+		SourceTracking:  SourceTracking{Type: SourceTrackingNone},
+		ChangeNaming:    "<issue-number>-<slug>",
+		Runtimes:        append([]string(nil), DefaultRuntimes...),
+	}
+}
+
+// Save atomically writes cfg to path as lifecycle.yml. Used only to seed a
+// brand-new file (`lifecycle init`, implementation-plan.md §2.9 step e) —
+// once written, lifecycle.yml is a human-owned file no other verb
+// mutates, so there is no surgical-edit concern here the way there is for
+// openspec/config.yaml (internal/scaffold.EnsureProjectConfig).
+func Save(path string, cfg *Config) error {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	return atomicwrite.WriteFile(path, data, 0o644)
 }

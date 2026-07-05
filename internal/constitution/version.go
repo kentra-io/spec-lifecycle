@@ -88,6 +88,24 @@ func CheckVersion(bin, pin string) (Preflight, error) {
 	return pf, nil
 }
 
+// MinorPin derives a "<major>.<minor>.x" version pin from a reported
+// version string v (e.g. "0.3.2" -> "0.3.x"; "v1.2.0-rc1 (abcdef)" ->
+// "1.2.x"), for `lifecycle init` to seed lifecycle.yml's
+// `constitution.version` from a freshly detected binary
+// (implementation-plan.md §2.9 step e). ok=false when v isn't a
+// dotted-numeric release build (e.g. a "(devel)" local build) or has
+// fewer than two numeric components — init leaves the pin empty in that
+// case rather than guess (an empty pin is always satisfied, §7 item 5:
+// "presence, not version, is the only hard prerequisite when nothing is
+// pinned").
+func MinorPin(v string) (pin string, ok bool) {
+	parts, ok := leadingDottedNumeric(v)
+	if !ok || len(parts) < 2 {
+		return "", false
+	}
+	return parts[0] + "." + parts[1] + ".x", true
+}
+
 // leadingDottedNumeric parses v's leading dotted-numeric run (optionally
 // preceded by a single "v", e.g. "v0.1.0" or "0.1.0-rc1 (abcdef)" → the
 // "0.1.0" portion), ok=false if v doesn't start with one at all.
