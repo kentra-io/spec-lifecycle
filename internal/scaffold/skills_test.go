@@ -29,17 +29,17 @@ func TestBuildBlockTargets(t *testing.T) {
 	}
 }
 
-func TestBuildSkillItems_AllFiveSkillsPerRuntime(t *testing.T) {
+func TestBuildSkillItems_AllSkillsPerRuntime(t *testing.T) {
 	items, err := BuildSkillItems([]string{config.RuntimeClaudeCode, config.RuntimeCursor, config.RuntimeCodex})
 	if err != nil {
 		t.Fatalf("BuildSkillItems: %v", err)
 	}
-	// 5 skills * 3 trees.
-	if len(items) != 15 {
-		t.Fatalf("BuildSkillItems() = %d items, want 15", len(items))
+	// 6 skills * 3 trees.
+	if len(items) != 18 {
+		t.Fatalf("BuildSkillItems() = %d items, want 18", len(items))
 	}
 
-	wantSkills := []string{"lifecycle-refine", "lifecycle-design", "lifecycle-plan", "lifecycle-bug", "lifecycle-archive"}
+	wantSkills := []string{"lifecycle-refine", "lifecycle-design", "lifecycle-plan", "lifecycle-bug", "lifecycle-archive", "lifecycle-new-feature"}
 	wantDirs := map[string]string{
 		config.RuntimeClaudeCode: ".claude",
 		config.RuntimeCursor:     ".cursor",
@@ -69,13 +69,42 @@ func TestBuildSkillItems_SingleRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSkillItems: %v", err)
 	}
-	if len(items) != 5 {
-		t.Fatalf("BuildSkillItems(cursor) = %d items, want 5", len(items))
+	if len(items) != 6 {
+		t.Fatalf("BuildSkillItems(cursor) = %d items, want 6", len(items))
 	}
 	for _, it := range items {
 		if filepath.ToSlash(it.Rel)[:len(".cursor/")] != ".cursor/" {
 			t.Errorf("item %s not under .cursor/", it.Rel)
 		}
+	}
+}
+
+// TestBuildSkillItems_CodexOnlyRoutesToAgentsNotClaude proves the intake
+// skill (lifecycle-new-feature) is fanned out under .agents/skills/ when
+// only codex is selected, and is absent under .claude/ — the runtime
+// fan-out routes per-runtime, it doesn't fan every skill into every tree
+// regardless of selection (approved scenario: "intake skill is absent when
+// its runtime is not selected").
+func TestBuildSkillItems_CodexOnlyRoutesToAgentsNotClaude(t *testing.T) {
+	items, err := BuildSkillItems([]string{config.RuntimeCodex})
+	if err != nil {
+		t.Fatalf("BuildSkillItems: %v", err)
+	}
+	byRel := map[string][]byte{}
+	for _, it := range items {
+		byRel[filepath.ToSlash(it.Rel)] = it.Content
+	}
+	want := ".agents/skills/lifecycle-new-feature/SKILL.md"
+	content, ok := byRel[want]
+	if !ok {
+		t.Fatalf("missing fanned-out skill item %s", want)
+	}
+	if len(content) == 0 {
+		t.Errorf("%s: empty content", want)
+	}
+	unwanted := ".claude/skills/lifecycle-new-feature/SKILL.md"
+	if _, ok := byRel[unwanted]; ok {
+		t.Errorf("%s: present, want absent when only codex is selected", unwanted)
 	}
 }
 
@@ -94,7 +123,7 @@ func TestSkillNamesAndContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("skillNames: %v", err)
 	}
-	want := []string{"lifecycle-archive", "lifecycle-bug", "lifecycle-design", "lifecycle-plan", "lifecycle-refine"}
+	want := []string{"lifecycle-archive", "lifecycle-bug", "lifecycle-design", "lifecycle-new-feature", "lifecycle-plan", "lifecycle-refine"}
 	if len(names) != len(want) {
 		t.Fatalf("skillNames() = %v, want %v", names, want)
 	}

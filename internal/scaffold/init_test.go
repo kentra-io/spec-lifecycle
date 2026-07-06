@@ -128,7 +128,7 @@ func TestRunInit_FreshRepoWritesEverything(t *testing.T) {
 
 	// steps g/h: skills fan-out + managed pointer blocks
 	for _, dir := range []string{".claude", ".agents", ".cursor"} {
-		for _, skill := range []string{"lifecycle-refine", "lifecycle-design", "lifecycle-plan", "lifecycle-bug", "lifecycle-archive"} {
+		for _, skill := range []string{"lifecycle-refine", "lifecycle-design", "lifecycle-plan", "lifecycle-bug", "lifecycle-archive", "lifecycle-new-feature"} {
 			p := filepath.Join(root, dir, "skills", skill, "SKILL.md")
 			if _, err := os.Stat(p); err != nil {
 				t.Errorf("missing fanned-out skill %s: %v", p, err)
