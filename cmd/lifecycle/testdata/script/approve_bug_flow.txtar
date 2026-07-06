@@ -1,0 +1,31 @@
+# Bug flow (spec-lifecycle.md §8): `type: bug` in proposal.md's
+# frontmatter selects the repro/fix stage set (not refine/design/plan);
+# repro needs no specs/ delta; fix's tasks.md is optional.
+
+env HOME=/no-home
+
+exec lifecycle approve --stage repro 007-fix-panic
+stdout 'approve: approved stage "repro" for 007-fix-panic \(1 artifact\(s\) hashed\)'
+
+exec lifecycle status --change 007-fix-panic
+stdout '007-fix-panic \(bug\)'
+stdout 'repro    approved'
+stdout 'fix      pending'
+! stdout 'refine'
+! stdout 'design'
+! stdout 'plan '
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/007-fix-panic/proposal.md --
+---
+issue: "kentra-io/kafka-dq#7"
+type: bug
+---
+
+# Fix panic on empty input
+
+Repro: `TestParseEmptyInput` in parser_test.go currently panics; should
+return a ParseError instead.

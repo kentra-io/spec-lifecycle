@@ -1,0 +1,4 @@
+# `lifecycle --version` reports a version-shaped string (M0 DoD).
+exec lifecycle --version
+stdout '^lifecycle version \S+'
+! stderr .

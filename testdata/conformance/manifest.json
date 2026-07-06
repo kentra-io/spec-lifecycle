@@ -1,0 +1,286 @@
+{
+  "oracle": {
+    "package": "@fission-ai/openspec",
+    "version": "1.5.0",
+    "sourceRepo": "https://github.com/Fission-AI/OpenSpec",
+    "sourceCommit": "546224e00db26bd1be69874be465d5d6f5e4a851",
+    "sourceTag": "v1.5.0"
+  },
+  "files": [
+    {
+      "path": "cases/01-add-empty-capability/before/specs/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "cases/01-add-empty-capability/change/001-add-password-login/proposal.md",
+      "sha256": "510251607923eab63df01e97b47009b50ffa0e92611ad879a1820f50383daecc",
+      "bytes": 358
+    },
+    {
+      "path": "cases/01-add-empty-capability/change/001-add-password-login/specs/auth/spec.md",
+      "sha256": "70b8d83af33d876fb4b18a4cdab521514c191721149e6a7cb4e76973aa4f073d",
+      "bytes": 369
+    },
+    {
+      "path": "cases/01-add-empty-capability/change/001-add-password-login/tasks.md",
+      "sha256": "d7efc0aab1a56a962b4e09ed9cc71228b82312732ec4a4838d6f600bc3a8c84b",
+      "bytes": 311
+    },
+    {
+      "path": "cases/01-add-empty-capability/expected/specs/auth/spec.md",
+      "sha256": "6c777f39b02b312cdf317a6babec7e5196f32a51a15c67a1df37be5cdad6f949",
+      "bytes": 485
+    },
+    {
+      "path": "cases/02-add-to-existing/before/specs/auth/spec.md",
+      "sha256": "9d28a0c011f71848c3150bc6732de2a5a68568d724db15579f7472fdde920c2b",
+      "bytes": 774
+    },
+    {
+      "path": "cases/02-add-to-existing/change/002-add-mfa/proposal.md",
+      "sha256": "f6c13f59272ede2ee34bfd2870609dfeb66ddc59d802a3bb1a4c423c79908e5f",
+      "bytes": 274
+    },
+    {
+      "path": "cases/02-add-to-existing/change/002-add-mfa/specs/auth/spec.md",
+      "sha256": "be8f31ca2cdf1e372f2d661e4c4ec116e04e65daaf467ab7ddb3a07bfce9fe87",
+      "bytes": 409
+    },
+    {
+      "path": "cases/02-add-to-existing/change/002-add-mfa/tasks.md",
+      "sha256": "238be7602df6cdd160551d0092ce8adc1dfc972309829631653d910ecc017273",
+      "bytes": 294
+    },
+    {
+      "path": "cases/02-add-to-existing/expected/specs/auth/spec.md",
+      "sha256": "96f33d262d4081d3ee2c9ee596f2a95f2eaf401232ccef29ea6edac28ab6c2c4",
+      "bytes": 1162
+    },
+    {
+      "path": "cases/03-modified-requirement/before/specs/auth/spec.md",
+      "sha256": "9d28a0c011f71848c3150bc6732de2a5a68568d724db15579f7472fdde920c2b",
+      "bytes": 774
+    },
+    {
+      "path": "cases/03-modified-requirement/change/003-widen-session-expiry/proposal.md",
+      "sha256": "bf9999aa5f404cb52df458278d42ffd08a656bff5b97b5d7fcb080e011403695",
+      "bytes": 371
+    },
+    {
+      "path": "cases/03-modified-requirement/change/003-widen-session-expiry/specs/auth/spec.md",
+      "sha256": "d294858b3fe06e3171dcbfc660149f11bd6d200e6a7ae5c58502a4effab0911e",
+      "bytes": 598
+    },
+    {
+      "path": "cases/03-modified-requirement/change/003-widen-session-expiry/tasks.md",
+      "sha256": "57be97315a5764b34b36da1e910bd9db50e97cc4e1b8f2634ac5a3b61c22e8f8",
+      "bytes": 415
+    },
+    {
+      "path": "cases/03-modified-requirement/expected/specs/auth/spec.md",
+      "sha256": "bf165a71d78fae45d6531576690a0b2e1cac460dea4234343f3e8cbc74194f6d",
+      "bytes": 1026
+    },
+    {
+      "path": "cases/04-removed-requirement/before/specs/auth/spec.md",
+      "sha256": "7cc525062dcc97ddaedb89aabf853d0dba6249c8b923c3d55ac57b621ee9bc4e",
+      "bytes": 1110
+    },
+    {
+      "path": "cases/04-removed-requirement/change/004-remove-legacy-token-login/proposal.md",
+      "sha256": "fb2966df159dc18897c1d8bba15d609619f05472a3ae9e77a4026acfca93d3b5",
+      "bytes": 290
+    },
+    {
+      "path": "cases/04-removed-requirement/change/004-remove-legacy-token-login/specs/auth/spec.md",
+      "sha256": "528149aeed07b107c12c58a800d3d9f8ed6dc5a564c7a76fba22f0132d99e141",
+      "bytes": 195
+    },
+    {
+      "path": "cases/04-removed-requirement/change/004-remove-legacy-token-login/tasks.md",
+      "sha256": "3b7ed5438e6acc28f02141053c485ea6fdbfe49f9fc6c40abbed9778f731a2e4",
+      "bytes": 342
+    },
+    {
+      "path": "cases/04-removed-requirement/expected/specs/auth/spec.md",
+      "sha256": "30668f503035673f4180adb6df0a80176fc589db035ebce47d640ae4e0d75d75",
+      "bytes": 774
+    },
+    {
+      "path": "cases/05-renamed-requirement/before/specs/auth/spec.md",
+      "sha256": "9d28a0c011f71848c3150bc6732de2a5a68568d724db15579f7472fdde920c2b",
+      "bytes": 774
+    },
+    {
+      "path": "cases/05-renamed-requirement/change/005-rename-password-login/proposal.md",
+      "sha256": "06f8b52e778d74dd3efd2d371636f670c559600cea0efe6d3c8444048055a34a",
+      "bytes": 357
+    },
+    {
+      "path": "cases/05-renamed-requirement/change/005-rename-password-login/specs/auth/spec.md",
+      "sha256": "d9aa43571620cdacc952d1ad383c4672a7daaa4171b84d8fccac6a2f31ae99df",
+      "bytes": 119
+    },
+    {
+      "path": "cases/05-renamed-requirement/change/005-rename-password-login/tasks.md",
+      "sha256": "da17dcb1c780ac74ea23005db35a125d4b9760745b792c616fda0e8aaff02ebe",
+      "bytes": 306
+    },
+    {
+      "path": "cases/05-renamed-requirement/expected/specs/auth/spec.md",
+      "sha256": "56f237b99683986a4b9967e910f5f8743612a28038527277550be0af5de86146",
+      "bytes": 787
+    },
+    {
+      "path": "cases/06-renamed-and-modified/before/specs/auth/spec.md",
+      "sha256": "9d28a0c011f71848c3150bc6732de2a5a68568d724db15579f7472fdde920c2b",
+      "bytes": 774
+    },
+    {
+      "path": "cases/06-renamed-and-modified/change/006-rename-and-widen-session-expiry/proposal.md",
+      "sha256": "3c3a39f3642d3e2ed02b8fba7d4f05ad7a4f02d0b24c36e0b2cb83067bf176db",
+      "bytes": 469
+    },
+    {
+      "path": "cases/06-renamed-and-modified/change/006-rename-and-widen-session-expiry/specs/auth/spec.md",
+      "sha256": "57befee705327ae7f8da0d2af313e69c3a9bdb355764d0d5f3a2189629eebd02",
+      "bytes": 477
+    },
+    {
+      "path": "cases/06-renamed-and-modified/change/006-rename-and-widen-session-expiry/tasks.md",
+      "sha256": "e1e2eaa296b251f19151bd68edfd8aa06815f6d836fef8d042269dbc42574ee5",
+      "bytes": 351
+    },
+    {
+      "path": "cases/06-renamed-and-modified/expected/specs/auth/spec.md",
+      "sha256": "1bab9d578bc0cef17b66a2f45eea0bead7cb36a07db9c27eb2396f8b2b4179df",
+      "bytes": 786
+    },
+    {
+      "path": "cases/07-multi-op-delta/before/specs/auth/spec.md",
+      "sha256": "7cc525062dcc97ddaedb89aabf853d0dba6249c8b923c3d55ac57b621ee9bc4e",
+      "bytes": 1110
+    },
+    {
+      "path": "cases/07-multi-op-delta/change/007-auth-cleanup-and-lockout/proposal.md",
+      "sha256": "44451aa9fa5f88c2baad272b0cc4d221917b6a04ea0177f653fb9934c9fd3472",
+      "bytes": 467
+    },
+    {
+      "path": "cases/07-multi-op-delta/change/007-auth-cleanup-and-lockout/specs/auth/spec.md",
+      "sha256": "0f9712d14e6eba580aaac8f2d47ffd583a86dfcc522f25ac0483d9041367620e",
+      "bytes": 993
+    },
+    {
+      "path": "cases/07-multi-op-delta/change/007-auth-cleanup-and-lockout/tasks.md",
+      "sha256": "4919cf9ea2571bd905904b5afab72b0829389182ff20c24a9c3d27617fffaff9",
+      "bytes": 889
+    },
+    {
+      "path": "cases/07-multi-op-delta/expected/specs/auth/spec.md",
+      "sha256": "1042e877b07f434e6d1e9a0bdcf6f543e609abbcee8e85289318d866f53cd1a3",
+      "bytes": 1203
+    },
+    {
+      "path": "cases/08-multi-capability/before/specs/auth/spec.md",
+      "sha256": "1a56981f85e42945801f53ecb8883f2754e0f8910de9218bb7a3206d7ad5bfb2",
+      "bytes": 452
+    },
+    {
+      "path": "cases/08-multi-capability/before/specs/billing/spec.md",
+      "sha256": "01ae9cc98d78a84aeb7c2ad1486703149f88f8baa1919ff7f8baeb9437099c5d",
+      "bytes": 394
+    },
+    {
+      "path": "cases/08-multi-capability/change/008-trial-signup/proposal.md",
+      "sha256": "467ac123316a322adb6cea7d0c5dfd2489dfde5eefd6cc80a758bfaf67379b74",
+      "bytes": 373
+    },
+    {
+      "path": "cases/08-multi-capability/change/008-trial-signup/specs/auth/spec.md",
+      "sha256": "76f3770e2f486e59a2dc88996b9b361ac867493128a2e43246ddcae10c25b20a",
+      "bytes": 408
+    },
+    {
+      "path": "cases/08-multi-capability/change/008-trial-signup/specs/billing/spec.md",
+      "sha256": "4f17b50c78d2eb27d2d48e847958674a65d345d5ba5033afcb990e50ac02c2e9",
+      "bytes": 382
+    },
+    {
+      "path": "cases/08-multi-capability/change/008-trial-signup/tasks.md",
+      "sha256": "88ca35ee00edc0bc03555a6eea8da385a199b9a65ce881c9bf0149b04e1243ae",
+      "bytes": 419
+    },
+    {
+      "path": "cases/08-multi-capability/expected/specs/auth/spec.md",
+      "sha256": "427d48589d6d717a06ee166777f693a28b9fd6f503afb97e640916687bb93de2",
+      "bytes": 839
+    },
+    {
+      "path": "cases/08-multi-capability/expected/specs/billing/spec.md",
+      "sha256": "ab405f4af7388ffaee10f7ae758fb418ea738c4c00a499d97024fa3b339fad8c",
+      "bytes": 755
+    },
+    {
+      "path": "cases/09-scenario-rich/before/specs/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "cases/09-scenario-rich/change/009-rate-limit-api/proposal.md",
+      "sha256": "565c20831a7e4619b6da74c1a39b1acddc1fb6851ef0434edecd2f7709a0bad5",
+      "bytes": 310
+    },
+    {
+      "path": "cases/09-scenario-rich/change/009-rate-limit-api/specs/api/spec.md",
+      "sha256": "7f6589d9f273303d0246ece1b3670c42941c82d19cebd03951ea53a9c7027395",
+      "bytes": 2010
+    },
+    {
+      "path": "cases/09-scenario-rich/change/009-rate-limit-api/tasks.md",
+      "sha256": "42e2c351888bbfa00c8b6b5ef0fd419b04ed0792c717ca5c2ab43afb7333d66c",
+      "bytes": 580
+    },
+    {
+      "path": "cases/09-scenario-rich/expected/specs/api/spec.md",
+      "sha256": "f9359d72d537efb043e96622599420d843372e10e50968180bddd330331915f0",
+      "bytes": 2121
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/before/specs/auth/spec.md",
+      "sha256": "1a56981f85e42945801f53ecb8883f2754e0f8910de9218bb7a3206d7ad5bfb2",
+      "bytes": 452
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/change/010-add-webhooks/proposal.md",
+      "sha256": "4a198d8a22486f8cd43c58df42fd917d2676feeff3f4a04175d02b07a0efd56e",
+      "bytes": 511
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/change/010-add-webhooks/specs/auth/spec.md",
+      "sha256": "7e30dc7f9bf661e84cffad924047c673ca90f225cdf2ee7c2e57b96c175a0733",
+      "bytes": 470
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/change/010-add-webhooks/specs/webhooks/spec.md",
+      "sha256": "56ea952614f57fe1a3bd1eb71ce1d0c691fa783a8124ea56100b02f6b2ef810a",
+      "bytes": 409
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/change/010-add-webhooks/tasks.md",
+      "sha256": "457ab558682d507c090d8767d6420e5e22987f87d7e25d8ecf35d6cecde8ea65",
+      "bytes": 403
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/expected/specs/auth/spec.md",
+      "sha256": "a5169ce43aa6db965a101ab54d3649e6c9c8945f73df5d9d7abb874555f0e4a0",
+      "bytes": 901
+    },
+    {
+      "path": "cases/10-new-capability-alongside-existing/expected/specs/webhooks/spec.md",
+      "sha256": "338999413e0de9fc58fafbe3ade41edc5dfbfdc8247e3606dea5ea977ca2c369",
+      "bytes": 523
+    }
+  ]
+}

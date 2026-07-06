@@ -1,0 +1,49 @@
+# `--design-skip` on `--stage refine`: records designSkipped:true on the
+# refine entry; no design entry is written; `lifecycle status` reports
+# design as "skipped", not "pending" (spec-lifecycle.md §3.2/§5).
+# `--design-skip` on any other stage is a usage error (exit 2).
+
+env HOME=/no-home
+
+exitcode 2 lifecycle approve --stage plan --design-skip 042-user-auth
+stderr 'design-skip is only valid with --stage refine'
+
+exec lifecycle approve --stage refine --design-skip 042-user-auth
+stdout 'approve: approved stage "refine"'
+
+exec lifecycle status --change 042-user-auth
+stdout 'refine   approved'
+stdout 'design   skipped'
+stdout 'plan     pending'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+designSkip: true
+---
+
+# Tiny local fix
+
+## Why
+Small, local, architecturally inert.
+
+## What Changes
+- **auth:** MODIFIED - tweak session timeout.
+
+## Impact
+- auth only.
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## MODIFIED Requirements
+
+### Requirement: Session timeout
+The system SHALL expire an idle session after 30 minutes.
+
+#### Scenario: Idle expiry
+- **GIVEN** an authenticated session
+- **WHEN** it is idle for 30 minutes
+- **THEN** the system SHALL expire it

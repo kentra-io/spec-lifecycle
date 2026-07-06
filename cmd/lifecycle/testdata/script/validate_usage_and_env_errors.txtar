@@ -1,0 +1,48 @@
+# `lifecycle validate`'s "could not run at all" paths (exit 2): an
+# unrecognized --stage, a missing required --stage, a bad --format, and no
+# openspec/ project root at all. None of these are "findings" (exit 1).
+
+exitcode 2 lifecycle validate --stage bogus
+stderr 'validate: --stage must be one of'
+
+exitcode 2 lifecycle validate
+stderr 'stage'
+
+exitcode 2 lifecycle validate --stage refine --format xml
+stderr 'validate: --format must be "text" or "json"'
+
+exitcode 2 lifecycle validate --stage refine --change does-not-exist
+stderr 'validate: change "does-not-exist" not found'
+
+cd noopenspec
+exitcode 2 lifecycle validate --stage refine
+stderr 'no openspec/ directory'
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+---
+
+# Title
+
+## Why
+x
+
+## What Changes
+- x
+
+## Impact
+- x
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow login.
+
+#### Scenario: ok
+- **GIVEN** a
+- **WHEN** b
+- **THEN** c
+
+-- noopenspec/.gitkeep --

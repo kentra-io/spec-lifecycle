@@ -1,0 +1,41 @@
+# `lifecycle init`'s constitution preflight (implementation-plan.md §2.7/
+# §2.9 step f): presence + version vs the `constitution.version` pin is
+# checked, but EITHER outcome is a warning on stderr, never a failure —
+# `init` always exits 0 and finishes writing the rest of the scaffold,
+# because the companion binary is only actually required later, at gates
+# 2/3 (`lifecycle approve --stage design|plan`).
+#
+# "Missing" is forced deterministically via the documented
+# LIFECYCLE_CONSTITUTION_BIN override (internal/constitution.Locate),
+# independent of whatever this environment's real PATH happens to
+# contain — this half of the script always runs. "Present" then needs
+# the REAL constitution binary built from the sibling
+# adr-sourced-constitution repo (main_test.go's realConstitutionBinDir,
+# already on PATH via this suite's Setup): skipped with a clear reason
+# when that sibling repo isn't buildable here (mirrors
+# approve_design_gate_real_constitution.txtar's own guard).
+
+env LIFECYCLE_CONSTITUTION_BIN=$WORK/does-not-exist/constitution
+
+exec lifecycle init
+stdout 'init: spec-lifecycle project ready'
+stderr 'init: warning: constitution binary not found'
+stderr 'install the adr-sourced-constitution companion primitive'
+
+[!realconstitution] skip 'adr-sourced-constitution sibling repo not buildable in this environment (set LIFECYCLE_TEST_CONSTITUTION_REPO, or check it out alongside spec-lifecycle)'
+
+# Fresh project #2: no override, so Locate falls through to the real PATH
+# entry this suite's Setup prepended — the companion primitive really is
+# "present" now (confirmed directly, not inferred), and `init` records no
+# missing-binary warning.
+env LIFECYCLE_CONSTITUTION_BIN=
+mkdir present
+cd present
+
+exec constitution --version
+stdout 'constitution version'
+
+exec lifecycle init
+stdout 'init: spec-lifecycle project ready'
+! stderr 'constitution binary not found'
+exists lifecycle.yml

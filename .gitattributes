@@ -1,0 +1,4 @@
+# Bytes are canonical in this repo: the conformance corpus, goldens, and the
+# format engine's outputs are byte-compared. Disable all EOL conversion so
+# Windows checkouts (core.autocrlf) cannot mangle fixtures.
+* -text

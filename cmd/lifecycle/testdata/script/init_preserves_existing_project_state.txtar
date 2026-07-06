@@ -1,0 +1,87 @@
+# `lifecycle` owns the openspec/ tree, lifecycle.yml, every
+# approval-state.json, and the archive ledger (implementation-plan.md
+# §2.9's ownership line) — but `init`'s own compose only ever ADDS
+# scaffolding it finds missing; it must never rewrite an existing
+# project's already-existing lifecycle-owned records: an in-flight
+# change's artifacts and gate state, an already-archived change, the
+# ledger, and a hand-configured lifecycle.yml all survive an `init`
+# re-run byte-for-byte.
+
+mkdir backup
+cp lifecycle.yml backup/lifecycle.yml
+cp openspec/changes/001-in-flight/proposal.md backup/proposal.md
+cp openspec/changes/001-in-flight/approval-state.json backup/approval-state.json
+cp openspec/ledger.jsonl backup/ledger.jsonl
+cp openspec/changes/archive/000-done/tasks.md backup/archived-tasks.md
+cp openspec/specs/auth/spec.md backup/spec.md
+
+exec lifecycle init
+stdout 'init: spec-lifecycle project ready'
+
+cmp lifecycle.yml backup/lifecycle.yml
+cmp openspec/changes/001-in-flight/proposal.md backup/proposal.md
+cmp openspec/changes/001-in-flight/approval-state.json backup/approval-state.json
+cmp openspec/ledger.jsonl backup/ledger.jsonl
+cmp openspec/changes/archive/000-done/tasks.md backup/archived-tasks.md
+cmp openspec/specs/auth/spec.md backup/spec.md
+
+# A second re-run (now that init's OWN scaffolding — schema descriptor,
+# config.yaml, skills, pointer blocks — is also in place) changes nothing
+# further either.
+exec lifecycle init
+cmp lifecycle.yml backup/lifecycle.yml
+cmp openspec/changes/001-in-flight/proposal.md backup/proposal.md
+cmp openspec/changes/001-in-flight/approval-state.json backup/approval-state.json
+cmp openspec/ledger.jsonl backup/ledger.jsonl
+cmp openspec/changes/archive/000-done/tasks.md backup/archived-tasks.md
+cmp openspec/specs/auth/spec.md backup/spec.md
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: strict
+specFormat:
+  convention: openspec
+  grammar: "1.5.0"
+sourceTracking:
+  type: github-issue
+  repo: kentra-io/kafka-dq
+runtimes: [claude-code]
+
+-- openspec/changes/001-in-flight/proposal.md --
+---
+issue: "kentra-io/kafka-dq#1"
+designSkip: false
+---
+
+# In-flight change
+
+## Why
+w
+
+## What Changes
+- x
+
+## Impact
+- y
+
+-- openspec/changes/001-in-flight/approval-state.json --
+{"changeId":"001-in-flight","gates":[{"stage":"refine","status":"approved","approvedAt":"2026-07-01T00:00:00Z","approvedBy":"jan","artifacts":{"proposal.md":"sha256:0"},"constitutionHash":null,"deviationConstitutionHash":null}]}
+
+-- openspec/ledger.jsonl --
+{"seq":1,"change":"000-done","issue":"kentra-io/kafka-dq#0","capability":"auth","preImageSha":"sha256-x","postImageSha":"sha256-y","deltaOps":[{"op":"ADDED","requirement":"Password login"}],"archiveManifestSha":"sha256-z"}
+
+-- openspec/changes/archive/000-done/tasks.md --
+## Milestone 1: Ship login
+**Goal** — ship it.
+**Deliverables** — auth capability.
+**Validation contract** — `go test ./...` passes.
+**Steps** — 1. implement. 2. test.
+
+-- openspec/specs/auth/spec.md --
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session

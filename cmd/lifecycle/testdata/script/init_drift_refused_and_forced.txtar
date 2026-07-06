@@ -1,0 +1,55 @@
+# A managed pointer block (CLAUDE.md) that drifted from what a previous
+# `init` last wrote is refused without --force — and, critically, refuses
+# CLEANLY when stdin is not a terminal, which is how every agent runs this
+# CLI. testscript's `exec` always backs a child process's stdin with a
+# pipe (never a real terminal — go-internal/testscript's own doc: "each
+# script runs ... in a fresh temporary work directory"; there is no tty
+# involved anywhere in this harness), so this script's plain `exec
+# lifecycle init` already proves the non-interactive path: no [y/N]
+# prompt, no hang, a clear message naming --force, and a non-zero exit.
+# cmd/lifecycle/init.go wires the interactive confirm ONLY when
+# isTerminal(os.Stdin) is true, which it never is here.
+#
+# --force then overwrites just the managed block's interior, leaving
+# every hand-authored line around it untouched.
+
+exec lifecycle init
+exists CLAUDE.md
+
+# Simulate a human hand-editing the managed block's interior (plus adding
+# their own prose around it, which must survive both the refusal AND the
+# eventual --force).
+cp fixtures/claude-drifted.md CLAUDE.md
+grep 'human-authored notes above' CLAUDE.md
+grep 'HACKED' CLAUDE.md
+
+exitcode 1 lifecycle init
+stderr 'CLAUDE\.md drifted from what .lifecycle init. last wrote'
+stderr '\-\-force'
+! stderr '\[y/N\]'
+
+# Refused: not one byte of CLAUDE.md changed.
+grep 'HACKED' CLAUDE.md
+grep 'human-authored notes above' CLAUDE.md
+grep 'human-authored notes below' CLAUDE.md
+
+exec lifecycle init --force
+stdout 'init: spec-lifecycle project ready'
+
+# Forced: the managed interior is back to what `lifecycle init` renders,
+# but the hand-authored surrounding prose survived the overwrite.
+! grep 'HACKED' CLAUDE.md
+grep 'human-authored notes above' CLAUDE.md
+grep 'human-authored notes below' CLAUDE.md
+grep 'lifecycle status' CLAUDE.md
+
+-- fixtures/claude-drifted.md --
+# My Project
+
+Some human-authored notes above the managed block.
+
+<!-- BEGIN spec-lifecycle v1 (managed — do not edit by hand; `lifecycle init` updates it) -->
+HACKED: do not trust this pointer, read something else instead.
+<!-- END spec-lifecycle v1 -->
+
+Some human-authored notes below the managed block.

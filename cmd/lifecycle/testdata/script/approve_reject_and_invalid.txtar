@@ -1,0 +1,25 @@
+# `lifecycle approve`: an invalid artifact is refused (exit 1, no write);
+# `--reject` bypasses validation and records a rejection; append-only +
+# latest-entry-per-stage across a second approve on the same stage.
+
+env HOME=/no-home
+
+# No proposal.md at all yet: refine's own artifact validation fails.
+exitcode 1 lifecycle approve --stage refine 007-fix-panic
+stderr 'proposal.md not found'
+! exists openspec/changes/007-fix-panic/approval-state.json
+
+# --reject bypasses validation entirely — you can reject a bad/incomplete
+# artifact without fixing it first.
+exec lifecycle approve --stage refine --reject --notes 'not ready' 007-fix-panic
+stdout 'approve: rejected stage "refine" for 007-fix-panic'
+
+exec lifecycle status --change 007-fix-panic
+stdout 'refine   rejected'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/007-fix-panic/.keep --
+

@@ -1,0 +1,95 @@
+# Two changes fold the SAME capability (auth) in sequence: 001 creates it
+# (ADDED), 002 modifies it. Tampering the second ledger record's
+# preImageSha (via the tamperledger test helper — see main_test.go) breaks
+# the per-capability digest chain without touching any file content, so
+# check 1 (immutability) and check 3 (from-empty replay against the
+# archived deltas, which are untouched) both stay clean: only check 2's
+# chain link is broken.
+
+env HOME=/no-home
+
+exec lifecycle archive 001-add-password-login
+exec lifecycle archive 002-mfa
+
+tamperledger 2 preImageSha sha256:0000000000000000000000000000000000000000000000000000000000000
+
+exitcode 1 lifecycle guard --format json
+stdout '"check": "digest_chain"'
+stdout '"kind": "chain_break"'
+stdout '"change": "002-mfa"'
+stdout '"seq": 2'
+stdout '"findings": 1'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-password-login/proposal.md --
+# Add password login
+
+## Why
+The `auth` capability does not yet exist.
+
+-- openspec/changes/001-add-password-login/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/001-add-password-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-password-login",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
+
+-- openspec/changes/002-mfa/proposal.md --
+# Add MFA
+
+## Why
+Tighten login further.
+
+-- openspec/changes/002-mfa/specs/auth/spec.md --
+## MODIFIED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password, now with rate limiting.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/002-mfa/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "002-mfa",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}

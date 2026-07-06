@@ -1,0 +1,127 @@
+# The ONE testscript in this suite that exercises the REAL constitution
+# binary (implementation-plan.md M3's DoD), built fresh from the sibling
+# adr-sourced-constitution repo by main_test.go's realConstitutionBinDir
+# and put on PATH for every script — this script is the one that actually
+# calls it. Skipped with a clear reason if the sibling repo isn't
+# buildable in this environment (e.g. a standalone checkout of just this
+# repo).
+#
+# Covers: `lifecycle approve --stage design` accepts a VALID
+# deviation.json (constitutionHash matches the real, rendered
+# constitution.md; adrId cites a real, accepted, rule-bearing ADR) and
+# records deviationRef + deviationConstitutionHash; a planted INVALID
+# deviation.json (missing adrId) is caught by `constitution deviation
+# validate` and the gate entry is refused (exit 1, nothing written).
+
+[!realconstitution] skip 'adr-sourced-constitution sibling repo not buildable in this environment (set LIFECYCLE_TEST_CONSTITUTION_REPO, or check it out alongside spec-lifecycle)'
+
+env HOME=/no-home
+
+# Found on PATH (main_test.go's Setup) — confirms the real binary, not a
+# fake, is what this script exercises.
+exec constitution --version
+stdout 'constitution version'
+
+exec constitution adr new --title 'Use structured logging' --category architecture --body-file adr-body.md --rule 'Services MUST emit structured (JSON) logs.'
+exists constitution/constitution.md
+
+# --- valid deviation.json: gate succeeds, both hashes recorded ---
+injecthash openspec/changes/042-user-auth/deviation.json
+exec lifecycle approve --stage design --approve --approved-by jan 042-user-auth
+stdout 'approve: approved stage "design" for 042-user-auth'
+! stderr 'constitutionHash changed'
+
+exec lifecycle status --change 042-user-auth --format json
+stdout '"stage": "design"'
+stdout '"state": "approved"'
+
+# --- invalid deviation.json (missing adrId): refused, nothing written ---
+exitcode 1 lifecycle approve --stage design --approve 099-other-change
+stderr 'missing property .adrId.'
+! exists openspec/changes/099-other-change/approval-state.json
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- constitution.yml --
+schemaVersion: 1
+consent:
+  policy: off
+sourceTracking:
+  type: none
+categories:
+  - architecture
+
+-- adr-body.md --
+## Context and Problem Statement
+
+We need a consistent logging shape across services.
+
+## Considered Options
+
+- Free-form logs
+- Structured (JSON) logs
+
+## Decision Outcome
+
+Adopt structured logging.
+
+-- openspec/changes/042-user-auth/design.md --
+# Add password login — Design
+
+## Context
+Background.
+
+## Goals / Non-Goals
+**Goals:**
+Ship login.
+
+**Non-Goals:**
+SSO.
+
+## Decisions
+Use bcrypt.
+
+## NFR Discharge
+- Latency: p99 under 200ms, verified by benchmark.
+
+## ADR proposals
+(none)
+
+## Risks / Trade-offs
+None known.
+
+-- openspec/changes/042-user-auth/deviation.json --
+{"generatedAt":"2026-07-04T00:00:00Z","constitutionHash":"__HASH__","plan":"design.md",
+ "deviations":[{"id":"D-001","adrId":"ADR-0001","severity":"LOW","rule":"Use structured logging",
+   "location":{"file":"design.md"},"summary":"logging shape not yet decided in this design",
+   "recommendation":"conform"}],
+ "summary":{"critical":0,"high":0,"medium":0,"low":1}}
+
+-- openspec/changes/099-other-change/design.md --
+# Other change — Design
+
+## Context
+c
+
+## Goals / Non-Goals
+g
+
+## Decisions
+d
+
+## NFR Discharge
+none
+
+## ADR proposals
+none
+
+## Risks / Trade-offs
+none
+
+-- openspec/changes/099-other-change/deviation.json --
+{"generatedAt":"x","constitutionHash":"sha256:0000000000000000000000000000000000000000000000000000000000000000","plan":"design.md",
+ "deviations":[{"id":"D-001","severity":"LOW","rule":"r","location":{"file":"design.md"},
+   "summary":"s","recommendation":"conform"}],
+ "summary":{"critical":0,"high":0,"medium":0,"low":1}}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "change": "003-new-feature-intake",
+  "issue": "kentra-io/spec-lifecycle#3",
+  "gates": [
+    {
+      "stage": "refine",
+      "status": "approved",
+      "designSkipped": true,
+      "artifacts": {
+        "proposal.md": "sha256:9adefb15f553e45d764f39bcf22774f08b1c5632bb3298285c3f285af6f7e446",
+        "specs/feature-intake/spec.md": "sha256:82b9efaf412a7a20c78b76648111c09a34baa5b0879d1a3bb48556062004239b"
+      },
+      "constitutionHash": "sha256:cfc905e3ebb6d86dc789907d6dcf7343a22ddf8a712f3bd59086adf8c077e7a3",
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "agent",
+      "approvedAt": "2026-07-06T10:17:37Z",
+      "notes": ""
+    },
+    {
+      "stage": "plan",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {
+        "tasks.md": "sha256:1d9224bc8664eea1a48d3be2a71313d9b56afc0fbf043d965fb4b3125cb278f3"
+      },
+      "constitutionHash": "sha256:cfc905e3ebb6d86dc789907d6dcf7343a22ddf8a712f3bd59086adf8c077e7a3",
+      "deviationConstitutionHash": "sha256:cfc905e3ebb6d86dc789907d6dcf7343a22ddf8a712f3bd59086adf8c077e7a3",
+      "deviationRef": "deviation.json",
+      "approvedBy": "agent",
+      "approvedAt": "2026-07-06T10:25:58Z",
+      "notes": ""
+    }
+  ]
+}

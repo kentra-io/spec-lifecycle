@@ -1,0 +1,45 @@
+# A delta-less bug (no specs/ delta at all) archives with no fold: exactly
+# one ledger record, capability-less (spec-lifecycle.md §8/errata 9).
+
+env HOME=/no-home
+
+exec lifecycle archive 007-fix-panic --format json
+stdout '"capability": ""'
+stdout '"deltaOps": \[\]'
+stdout '"records"'
+
+! exists openspec/specs
+exists openspec/changes/archive/007-fix-panic/proposal.md
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/007-fix-panic/proposal.md --
+---
+issue: "kentra-io/kafka-dq#7"
+type: bug
+---
+
+# Fix panic on empty input
+
+Repro: `TestParseEmptyInput` currently panics; should return a ParseError.
+
+-- openspec/changes/007-fix-panic/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "007-fix-panic",
+  "issue": "kentra-io/kafka-dq#7",
+  "gates": [
+    {
+      "stage": "repro", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "fix", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}

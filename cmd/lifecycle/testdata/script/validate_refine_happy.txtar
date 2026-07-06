@@ -1,0 +1,35 @@
+# `lifecycle validate --stage refine` on a well-formed proposal.md +
+# specs/ delta: exit 0, "ok" on stdout, no stderr.
+
+exec lifecycle validate --stage refine
+stdout '042-user-auth: ok'
+stdout 'validate: 1 change\(s\), 0 error\(s\), 0 warning\(s\)'
+! stderr .
+
+-- openspec/changes/042-user-auth/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+designSkip: false
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/042-user-auth/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session

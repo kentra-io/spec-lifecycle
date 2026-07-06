@@ -1,0 +1,128 @@
+# Multi-change, multi-capability history: three archives across two
+# capabilities (auth, billing), the second auth change modifying what the
+# first one added. `lifecycle guard`'s from-empty replay must reproduce
+# BOTH capabilities' live projections byte-exactly, and the digest chain
+# across all four ledger records must hold — implementation-plan.md M5
+# DoD's "multi-change multi-capability history replays byte-exact".
+
+env HOME=/no-home
+
+exec lifecycle archive 001-add-password-login
+exec lifecycle archive 002-add-invoicing
+exec lifecycle archive 003-mfa
+
+exec lifecycle guard
+stdout 'guard: clean \(3 change\(s\), 3 ledger record\(s\) checked\)'
+
+exec lifecycle guard --format json
+stdout '"clean": true'
+stdout '"findings": \[\]'
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-password-login/proposal.md --
+# Add password login
+
+## Why
+The `auth` capability does not yet exist.
+
+-- openspec/changes/001-add-password-login/specs/auth/spec.md --
+## ADDED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/001-add-password-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-password-login",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
+
+-- openspec/changes/002-add-invoicing/proposal.md --
+# Add invoicing
+
+## Why
+The `billing` capability does not yet exist.
+
+-- openspec/changes/002-add-invoicing/specs/billing/spec.md --
+## ADDED Requirements
+### Requirement: Invoice generation
+The system SHALL generate an invoice at the end of each billing period.
+
+#### Scenario: Invoice generated on schedule
+- **GIVEN** an active billing period ends
+- **WHEN** the billing job runs
+- **THEN** the system SHALL generate an invoice for the account
+
+-- openspec/changes/002-add-invoicing/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "002-add-invoicing",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
+
+-- openspec/changes/003-mfa/proposal.md --
+# Add MFA
+
+## Why
+Tighten login further.
+
+-- openspec/changes/003-mfa/specs/auth/spec.md --
+## MODIFIED Requirements
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password, now with rate limiting.
+
+#### Scenario: Successful login with correct password
+- **GIVEN** a registered user with a known password
+- **WHEN** the user submits the correct username and password
+- **THEN** the system SHALL grant an authenticated session
+
+-- openspec/changes/003-mfa/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "003-mfa",
+  "issue": "",
+  "gates": [
+    {
+      "stage": "refine", "status": "approved", "designSkipped": true,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:00:00Z", "notes": ""
+    },
+    {
+      "stage": "plan", "status": "approved", "designSkipped": false,
+      "artifacts": {}, "deviationConstitutionHash": null, "deviationRef": null,
+      "approvedBy": "test", "approvedAt": "2026-07-04T00:01:00Z", "notes": ""
+    }
+  ]
+}
