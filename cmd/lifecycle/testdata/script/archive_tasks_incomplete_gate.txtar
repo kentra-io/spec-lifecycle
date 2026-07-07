@@ -1,0 +1,71 @@
+# `lifecycle archive` refuses by default when tasks.md declares a
+# checkbox-tracked Steps item ("<n>. [ ]") that is not checked (the
+# tasks-completion gate, harness orchestration.md §5.5) — exit 1, nothing
+# written — with an explicit --force-incomplete-tasks escape hatch that is
+# recorded (never silent) on the resulting ledger record.
+
+env HOME=/no-home
+
+exitcode 1 lifecycle archive 001-add-login
+stderr 'refused — tasks\.md has unchecked tracked step'
+stderr 'write the tests'
+! exists openspec/changes/archive/001-add-login
+! exists openspec/ledger.jsonl
+
+exec lifecycle archive --force-incomplete-tasks 001-add-login
+stderr 'warning: tasks-completion gate overridden'
+stdout 'archived "001-add-login"'
+
+exists openspec/changes/archive/001-add-login
+grep '"tasksIncompleteOverridden":true' openspec/ledger.jsonl
+
+-- lifecycle.yml --
+schemaVersion: 1
+consentPolicy: off
+
+-- openspec/changes/001-add-login/proposal.md --
+---
+issue: "kentra-io/kafka-dq#1"
+---
+
+# Add password login
+
+## Why
+Users need to authenticate.
+
+## What Changes
+- **auth:** ADDED - password login.
+
+## Impact
+- New capability: auth.
+
+-- openspec/changes/001-add-login/specs/auth/spec.md --
+## ADDED Requirements
+
+### Requirement: Password login
+The system SHALL allow a registered user to authenticate with a username and password.
+
+#### Scenario: Successful login
+- **GIVEN** a registered user
+- **WHEN** they submit correct credentials
+- **THEN** the system SHALL grant a session
+
+-- openspec/changes/001-add-login/tasks.md --
+## Milestone 1: Password login
+**Goal** — implement login.
+**Deliverables** — login handler, session cookie.
+**Validation contract** — checkable:
+  - `go test ./auth/...` passes
+**Steps** — ordered breakdown:
+  1. [x] write the handler
+  2. [ ] write the tests
+
+-- openspec/changes/001-add-login/approval-state.json --
+{
+  "schemaVersion": 1,
+  "change": "001-add-login",
+  "gates": [
+    {"stage": "refine", "status": "approved", "designSkipped": true, "approvedAt": "2026-07-07T00:00:00Z", "artifacts": {}},
+    {"stage": "plan", "status": "approved", "approvedAt": "2026-07-07T00:00:00Z", "artifacts": {}}
+  ]
+}

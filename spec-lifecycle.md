@@ -1,6 +1,6 @@
 # `spec-lifecycle` — Design Specification
 
-*Version: v1 draft. Generated: 2026-07-02. Revised: 2026-07-03 (approval-authority framing; artifact-tree clarification; schema → `kentra-spec-lifecycle`; naming resolved) then **2026-07-03 (Option B: pure-Go rebuild — OpenSpec is now a format we conform to, not a runtime we run; research errata folded in).** Status: **DESIGN — pending user review.***
+*Version: v1 draft. Generated: 2026-07-02. Revised: 2026-07-03 (approval-authority framing; artifact-tree clarification; schema → `kentra-spec-lifecycle`; naming resolved) then **2026-07-03 (Option B: pure-Go rebuild — OpenSpec is now a format we conform to, not a runtime we run; research errata folded in)** then **2026-07-07 (§4.2/§6.2/§9.1 addendum — the "execution handoff" the harness `orchestration` module's §5.5 needs: an optional structured validation contract on a milestone, a Steps checkbox-tracking convention + `archive` tasks-completion gate, and a new `lifecycle apply` verb surfacing milestones + contracts as JSON — all three additive, backward compatible, shipped in this same revision).** Status: **DESIGN — pending user review.***
 
 *A standalone SDD primitive: a staged, gated, spec-driven issue lifecycle. It adopts the **OpenSpec on-disk convention** — directory layout, delta grammar, fold semantics — but **reimplements the whole mechanism in pure Go**; there is no OpenSpec runtime, no Node, no shell-out. OpenSpec-the-tool is a **format we stay byte-compatible with** (so a kentra repo's `openspec/` tree still reads as an OpenSpec repo, and we could re-adopt their tooling later), not a dependency we execute. **File-based gate records** are the canonical interface to any external enforcement engine. Companion primitive to [`adr-sourced-constitution`](https://github.com/kentra-io/adr-sourced-constitution) (the governance substrate). Consumed by the kentra harness, but — like the constitution primitive — framework-portable and not harness-bound.*
 
@@ -173,6 +173,20 @@ Per milestone, fixed headings (machine-parseable by a verifier agent, human-read
 
 Planning owns contracts; execution consumes them (harness planning.md §9). The verifier grades against the contract, never a moving target. `lifecycle validate` (§6.1) checks these headings are present and structured — the parser is ours, so this is enforceable, not advisory.
 
+**Addendum (2026-07-07, harness `orchestration.md` §5.5's "execution handoff") — two additive, opt-in extensions, both backward compatible: a plan authored before this addendum still validates unchanged.**
+
+- **Steps checkbox tracking.** A Steps line may carry a `[ ]`/`[x]` checkbox right after the number — `1. [ ] <step>` / `1. [x] <step>` — GFM task-list convention grafted onto the existing ordered list. A bare `1. <step>` (no brackets) is still perfectly valid and simply untracked, exactly as every Steps line behaved before this addendum. The moment any step in a milestone opts into tracking, `lifecycle archive` (§6.2) refuses to archive the change until every tracked step in it is checked — the **tasks-completion gate**.
+- **Structured validation contract.** A milestone's Validation contract MAY additionally carry a fenced ` ```contract ` block (YAML) alongside its free-text bullets:
+
+  ```yaml
+  check: <a single executable acceptance-check command, run from the project root>
+  criteria: <plain-language acceptance criteria, for the advisory/human reviewer>
+  paths:
+    - <repo-relative glob this milestone's diff is confined to>
+  ```
+
+  All three fields (`check`, `criteria`, at least one `paths` entry) are required when the block is present at all; `paths` entries must be repo-relative (no leading `/`, no `..`) — the **diff-confined-paths declaration** an execution engine grades a milestone's diff against. `lifecycle validate --stage plan` enforces the block is well-formed WHEN PRESENT; its total absence is not an error. `lifecycle apply <change> --format json` (§9.1) is how an execution engine reads every milestone's Steps + contract back out as data, never by parsing markdown itself.
+
 ## 5. Gate records — the canonical interface
 
 Two JSON records per change folder; both committed; an engine reads both. `deviation.json` is defined by the constitution primitive (SARIF-shaped, `adrId` required per finding) — this spec only fixes its location: the change folder.
@@ -228,10 +242,11 @@ All four are pinned to the OpenSpec v1.5.0 grammar and proven against a static c
 
 On completion, `lifecycle archive <change>`:
 1. **Gate-check** — refuse unless `approval-state.json` shows every required stage `approved` (soft in Phase 1 → hard under Conductor/CI).
-2. **Conflict-check** — if the change's `MODIFIED`/`REMOVED`/`RENAMED` targets a requirement also touched by another in-flight change, surface it loudly. Because we own the fold, a genuine conflict is **detected by construction**, not silently dropped (contrast OpenSpec #1246).
-3. **Record pre-image** digests of affected capability specs.
-4. **Fold** the delta into `openspec/specs/<cap>/spec.md` (our engine, §6.1) and relocate the folder to `changes/archive/<name>/`.
-5. **Record post-image** digests + append the monotonic-`seq` ledger record(s).
+2. **Tasks-completion gate** (addendum, §4.2) — refuse if `tasks.md` declares any checkbox-tracked Steps item that is not checked. A `tasks.md` with no tracked steps at all, or no `tasks.md`, is never gated by this. Overridable with `--force-incomplete-tasks` (recorded on every ledger record, same posture as the two overrides below).
+3. **Conflict-check** — if the change's `MODIFIED`/`REMOVED`/`RENAMED` targets a requirement also touched by another in-flight change, surface it loudly. Because we own the fold, a genuine conflict is **detected by construction**, not silently dropped (contrast OpenSpec #1246).
+4. **Record pre-image** digests of affected capability specs.
+5. **Fold** the delta into `openspec/specs/<cap>/spec.md` (our engine, §6.1) and relocate the folder to `changes/archive/<name>/`.
+6. **Record post-image** digests + append the monotonic-`seq` ledger record(s).
 
 The archive directory is thereafter **append-only** — it is the event log; archived folders are never edited (guard-checked, §6.3).
 
@@ -289,16 +304,17 @@ Mirrors the constitution primitive's shape.
 
 ### 9.1 Layer 1 — CORE: the `lifecycle` CLI
 
-Go, single static binary, sibling of `constitution`, **no external language runtime**. Shares three small frozen internals with the constitution — `atomicwrite`, the managed-block/scaffold engine, and the skill fan-out — which are **copied** into this repo's `internal/` (not extracted into a shared library: both primitives stay standalone and the constitution gains no dependency — implementation-plan.md §2.12). Deterministic, no LLM. v1 verbs (6):
+Go, single static binary, sibling of `constitution`, **no external language runtime**. Shares three small frozen internals with the constitution — `atomicwrite`, the managed-block/scaffold engine, and the skill fan-out — which are **copied** into this repo's `internal/` (not extracted into a shared library: both primitives stay standalone and the constitution gains no dependency — implementation-plan.md §2.12). Deterministic, no LLM. v1 verbs (6), plus one addendum verb (2026-07-07, §4.2/§6.2's "execution handoff"):
 
 | Verb | Does |
 |---|---|
 | `lifecycle init` | Scaffold: create the `openspec/` tree, write the `kentra-spec-lifecycle` schema descriptor into `openspec/schemas/`, write `lifecycle.yml`, seed `openspec/config.yaml`, fan out skills, write managed AGENTS.md/CLAUDE.md pointer blocks (constitution-style markers). Preflights the `constitution` binary. |
-| `lifecycle validate --stage <s> [--format json]` | Delta-grammar validation (our Go parser, §6.1) + custom-artifact structure (§4.2). **Read-only, deterministic.** Stage skills run it as the §3.3 gate pre-check; `approve` re-runs the same code path before writing a gate entry. |
+| `lifecycle validate --stage <s> [--format json]` | Delta-grammar validation (our Go parser, §6.1) + custom-artifact structure (§4.2, incl. the optional structured contract block). **Read-only, deterministic.** Stage skills run it as the §3.3 gate pre-check; `approve` re-runs the same code path before writing a gate entry. |
 | `lifecycle approve --stage <s> [--reject] [--notes …] [--design-skip] [--approve]` | Compute artifact hashes + `constitutionHash`; at gates 2/3 run `constitution deviation validate`; append the gate entry to `approval-state.json` |
 | `lifecycle status [--change <n>] [--format json]` | Report gate state across change folders (reads records only); derive `pending`; flag post-gate artifact drift |
-| `lifecycle archive <change>` | §6.2: gate-check → conflict-check → pre-image digests → fold + relocate → post-image digests + ledger append |
+| `lifecycle archive <change> [--force-incomplete-tasks]` | §6.2: gate-check → tasks-completion gate → conflict-check → pre-image digests → fold + relocate → post-image digests + ledger append |
 | `lifecycle guard [--format json]` | §6.3: archive-immutability manifest + digest chain + from-empty replay. Exit 0/1/2 |
+| `lifecycle apply <change> [--format json]` | Addendum: read-only projection of `tasks.md`'s milestones — Steps (with checkbox state) + the optional structured contract — as text or JSON. Refuses (exit 1) if the same plan-stage validation `validate --stage plan` runs finds an error, so the data it surfaces is always already trustworthy. The machine-readable surface the harness `orchestration` module's read_plan step consumes. |
 
 `lifecycle validate` (delta-grammar + custom-artifact structure, §6.1) is **exposed as a read-only checkpoint verb** (review decision 2026-07-04): the stage skills run it before surfacing artifacts (§3.3), and `approve` re-runs the same code path so a gate entry can never be written over an invalid artifact. **Nothing is delegated to an external tool** — parse, validate, fold, archive are all ours.
 

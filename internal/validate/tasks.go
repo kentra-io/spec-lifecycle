@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ var milestoneHeadingRe = regexp.MustCompile(`(?i)^##\s+Milestone\s+(\d+)\s*:\s*(
 var milestoneLabels = []string{"**Goal**", "**Deliverables**", "**Validation contract**", "**Steps**"}
 
 const validationContractLabel = "**Validation contract**"
+const stepsLabel = "**Steps**"
 
 // validatePlan checks tasks.md's custom-artifact structure: every
 // milestone block carries all four fixed labels, and its Validation
@@ -43,15 +45,61 @@ func validatePlan(dir string) ([]Finding, error) {
 		return nil, fmt.Errorf("validate: reading %s: %w", path, err)
 	}
 
+	blocks, hasHeadings := splitMilestoneBlocks(data)
+	if !hasHeadings {
+		return []Finding{{
+			File: path, Line: 1, Kind: "no_milestone_headings",
+			Message:  `tasks.md has no "## Milestone <n>: <name>" headings (spec-lifecycle.md §4.2)`,
+			Severity: SeverityError,
+		}}, nil
+	}
+
+	var findings []Finding
+	for _, b := range blocks {
+		body := strings.Join(b.bodyLines, "\n")
+		for _, label := range milestoneLabels {
+			if !strings.Contains(body, label) {
+				findings = append(findings, Finding{
+					File: path, Line: b.headingLine, Kind: "missing_milestone_label",
+					Message:  fmt.Sprintf("%s is missing the %s label (spec-lifecycle.md §4.2)", b.name, label),
+					Severity: SeverityError,
+				})
+			}
+		}
+		if section, ok := labelSection(b.bodyLines, validationContractLabel); ok {
+			if !hasNonBlankLine(section) {
+				findings = append(findings, Finding{
+					File: path, Line: b.headingLine, Kind: "empty_validation_contract",
+					Message:  fmt.Sprintf("%s's Validation contract has no checkable lines under it (spec-lifecycle.md §4.2)", b.name),
+					Severity: SeverityError,
+				})
+			}
+			findings = append(findings, validateContractBlock(path, b.name, b.headingLine, section)...)
+		}
+	}
+	return findings, nil
+}
+
+// milestoneBlock is one "## Milestone <n>: <name>" section of tasks.md,
+// split out for both validatePlan's structural checks (above) and
+// ParseMilestones' extraction (plan.go) — one parse, two consumers, so
+// the two never drift on what counts as a milestone's boundaries.
+type milestoneBlock struct {
+	id          int
+	name        string   // the full heading text, e.g. "## Milestone 1: Password login"
+	title       string   // just "<name>", e.g. "Password login"
+	bodyLines   []string // lines strictly after the heading, up to (not including) the next heading
+	headingLine int      // 1-based heading line number, for Finding.Line
+}
+
+// splitMilestoneBlocks splits data's lines into one milestoneBlock per
+// "## Milestone <n>: <name>" heading found (spec-lifecycle.md §4.2).
+// hasHeadings is false when tasks.md has no such heading at all — the
+// caller decides what that means (validatePlan: a hard "no_milestone_headings"
+// Finding; ParseMilestones: simply zero milestones, not an error).
+func splitMilestoneBlocks(data []byte) (blocks []milestoneBlock, hasHeadings bool) {
 	lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
 
-	type block struct {
-		name    string
-		bodyLo  int // first line index (0-based, inclusive) of the milestone's body, right after its heading
-		bodyHi  int // last line index (0-based, exclusive)
-		heading int // 1-based heading line number, for Finding.Line
-	}
-	var blocks []block
 	var headingLines []int // 0-based indices of milestone headings
 	for i, line := range lines {
 		if milestoneHeadingRe.MatchString(line) {
@@ -59,61 +107,45 @@ func validatePlan(dir string) ([]Finding, error) {
 		}
 	}
 	if len(headingLines) == 0 {
-		return []Finding{{
-			File: path, Line: 1, Kind: "no_milestone_headings",
-			Message:  `tasks.md has no "## Milestone <n>: <name>" headings (spec-lifecycle.md §4.2)`,
-			Severity: SeverityError,
-		}}, nil
+		return nil, false
 	}
 	for i, hi := range headingLines {
 		hi2 := len(lines)
 		if i+1 < len(headingLines) {
 			hi2 = headingLines[i+1]
 		}
-		blocks = append(blocks, block{
-			name:    strings.TrimSpace(lines[hi]),
-			bodyLo:  hi + 1,
-			bodyHi:  hi2,
-			heading: hi + 1,
+		m := milestoneHeadingRe.FindStringSubmatch(lines[hi])
+		id, _ := strconv.Atoi(m[1])
+		blocks = append(blocks, milestoneBlock{
+			id:          id,
+			name:        strings.TrimSpace(lines[hi]),
+			title:       strings.TrimSpace(m[2]),
+			bodyLines:   lines[hi+1 : hi2],
+			headingLine: hi + 1,
 		})
 	}
+	return blocks, true
+}
 
-	var findings []Finding
-	for _, b := range blocks {
-		bodyLines := lines[b.bodyLo:b.bodyHi]
-		body := strings.Join(bodyLines, "\n")
-		for _, label := range milestoneLabels {
-			if !strings.Contains(body, label) {
-				findings = append(findings, Finding{
-					File: path, Line: b.heading, Kind: "missing_milestone_label",
-					Message:  fmt.Sprintf("%s is missing the %s label (spec-lifecycle.md §4.2)", b.name, label),
-					Severity: SeverityError,
-				})
-			}
-		}
-		if labelLine := indexOfLineContaining(bodyLines, validationContractLabel); labelLine != -1 {
-			// The label's OWN line may carry inline teaser text (e.g. "—
-			// checkable acceptance criteria, pre-committed:", per the
-			// template) — that is not itself a checkable line. Only the
-			// lines strictly BETWEEN the label's line and the next
-			// label/heading count.
-			next := len(bodyLines)
-			for i := labelLine + 1; i < len(bodyLines); i++ {
-				if containsAnyLabel(bodyLines[i]) {
-					next = i
-					break
-				}
-			}
-			if !hasNonBlankLine(bodyLines[labelLine+1 : next]) {
-				findings = append(findings, Finding{
-					File: path, Line: b.heading, Kind: "empty_validation_contract",
-					Message:  fmt.Sprintf("%s's Validation contract has no checkable lines under it (spec-lifecycle.md §4.2)", b.name),
-					Severity: SeverityError,
-				})
-			}
+// labelSection returns the body lines strictly between label's own line
+// and the next fixed milestone label (or the block's end, when label is
+// the last one — "**Steps**") — the "the label's own line may carry
+// inline teaser text; only lines strictly after it count" rule
+// (spec-lifecycle.md §4.2) applied generically, not just for Validation
+// contract. ok is false when label isn't found in bodyLines at all.
+func labelSection(bodyLines []string, label string) (section []string, ok bool) {
+	labelLine := indexOfLineContaining(bodyLines, label)
+	if labelLine == -1 {
+		return nil, false
+	}
+	next := len(bodyLines)
+	for i := labelLine + 1; i < len(bodyLines); i++ {
+		if containsAnyLabel(bodyLines[i]) {
+			next = i
+			break
 		}
 	}
-	return findings, nil
+	return bodyLines[labelLine+1 : next], true
 }
 
 func indexOfLineContaining(lines []string, substr string) int {

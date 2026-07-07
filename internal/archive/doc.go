@@ -7,6 +7,19 @@
 // §3.1): once archived, the change folder moves under changes/archive/ and
 // is thereafter append-only (guard-checked in M5).
 //
+// # Tasks-completion gate (harness orchestration.md §5.5)
+//
+// Immediately after step 1's gate-check, a second, independent check
+// (tasks_gate.go) refuses the archive if tasks.md declares any
+// checkbox-tracked Steps item ("<n>. [ ]"/"<n>. [x]",
+// internal/validate's opt-in addendum to spec-lifecycle.md §4.2) that
+// is not checked. Same override posture as the other two gates:
+// --force-incomplete-tasks bypasses it, recorded (never silently) via
+// Result/Record.TasksIncompleteOverridden. A change with no tasks.md, or
+// whose Steps carry no checkboxes at all, is never gated by this check —
+// see tasks_gate.go's doc comment for why that is the deliberately
+// backward-compatible default.
+//
 // # Gate-check reuse (not a second stage-set implementation)
 //
 // Step 1 does NOT re-derive "which stages does this change type require" —

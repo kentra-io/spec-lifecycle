@@ -15,6 +15,13 @@ var (
 	// MODIFIED/REMOVED/RENAMED, and req.ForceConflicts was false: nothing
 	// was written.
 	ErrConflict = errors.New("archive: refused — a conflicting in-flight change touches the same requirement")
+	// ErrTasksIncomplete means the tasks-completion gate
+	// (tasks_gate.go — harness orchestration.md §5.5) found at least one
+	// checkbox-tracked Steps item in tasks.md that is not checked, and
+	// req.ForceIncompleteTasks was false: nothing was written. A tasks.md
+	// with no tracked steps at all (or no tasks.md) never triggers this —
+	// see tasks_gate.go's doc comment.
+	ErrTasksIncomplete = errors.New("archive: refused — tasks.md has unchecked tracked step(s)")
 	// ErrFoldFailed means internal/spec.Fold refused this change's delta
 	// against the live capability spec (e.g. MODIFIED of a requirement
 	// that no longer exists) — a content problem in the delta itself, not
@@ -49,6 +56,10 @@ type Request struct {
 	// change touches the same requirement. Recorded the same way as
 	// ForceGates (Result/Record.ConflictsOverridden).
 	ForceConflicts bool
+	// ForceIncompleteTasks bypasses the tasks-completion gate's refusal
+	// when tasks.md has an unchecked tracked step. Recorded the same way
+	// as ForceGates/ForceConflicts (Result/Record.TasksIncompleteOverridden).
+	ForceIncompleteTasks bool
 }
 
 // Result is what a successful (or partially-completed, on a self-check
@@ -60,9 +71,13 @@ type Result struct {
 	Records             []Record `json:"records"`
 	GatesOverridden     bool     `json:"gatesOverridden,omitempty"`
 	ConflictsOverridden bool     `json:"conflictsOverridden,omitempty"`
-	// Warnings carries non-fatal notes: gate/conflict overrides, and any
-	// sibling change folder skipped during the conflict-check because its
-	// own delta could not be read/parsed.
+	// TasksIncompleteOverridden is set when the tasks-completion gate
+	// found unchecked tracked step(s) and req.ForceIncompleteTasks bypassed
+	// the refusal (tasks_gate.go).
+	TasksIncompleteOverridden bool `json:"tasksIncompleteOverridden,omitempty"`
+	// Warnings carries non-fatal notes: gate/conflict/tasks-completion
+	// overrides, and any sibling change folder skipped during the
+	// conflict-check because its own delta could not be read/parsed.
 	Warnings []string `json:"warnings,omitempty"`
 }
 
@@ -86,11 +101,12 @@ type Record struct {
 	PostImageSha       string    `json:"postImageSha"`
 	DeltaOps           []DeltaOp `json:"deltaOps"`
 	ArchiveManifestSha string    `json:"archiveManifestSha"`
-	// GatesOverridden/ConflictsOverridden are additive beyond the pinned
-	// shape (doc.go) — omitempty so an un-overridden archive's record is
-	// byte-for-byte the pinned shape.
-	GatesOverridden     bool `json:"gatesOverridden,omitempty"`
-	ConflictsOverridden bool `json:"conflictsOverridden,omitempty"`
+	// GatesOverridden/ConflictsOverridden/TasksIncompleteOverridden are
+	// additive beyond the pinned shape (doc.go) — omitempty so an
+	// un-overridden archive's record is byte-for-byte the pinned shape.
+	GatesOverridden           bool `json:"gatesOverridden,omitempty"`
+	ConflictsOverridden       bool `json:"conflictsOverridden,omitempty"`
+	TasksIncompleteOverridden bool `json:"tasksIncompleteOverridden,omitempty"`
 }
 
 // Conflict is one requirement-level collision the conflict-check found
