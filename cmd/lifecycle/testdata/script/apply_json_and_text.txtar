@@ -1,0 +1,94 @@
+# `lifecycle apply <change>` (harness orchestration.md §5.5): surfaces a
+# change's tasks.md milestones — Steps (with opt-in checkbox tracking) and
+# the optional structured validation contract — as text or JSON, read-only.
+# It refuses (exit 1) when tasks.md fails the same plan-stage structural
+# validation `lifecycle validate --stage plan` runs, e.g. a malformed
+# ```contract block.
+
+exitcode 0 lifecycle apply well-formed --format text
+stdout 'Milestone 1: Structured validation contract \[2/2 steps checked\]'
+stdout 'Milestone 2: No contract, untracked steps'
+stdout 'check:  go test ./internal/validate/\.\.\.'
+
+exitcode 0 lifecycle apply well-formed --format json
+stdout '"check": "go test ./internal/validate/\.\.\."'
+stdout '"tracked": true'
+stdout '"paths": \['
+stdout '"internal/validate/\*\*"'
+
+exitcode 1 lifecycle apply malformed-contract --format json
+stderr 'malformed_contract|is malformed'
+stderr 'refused'
+
+exitcode 2 lifecycle apply does-not-exist --format json
+stderr 'not found under'
+
+-- openspec/changes/well-formed/proposal.md --
+---
+issue: "kentra-io/kafka-dq#42"
+---
+
+# Structured contract + apply surface
+
+## Why
+Orchestration needs a machine-readable plan.
+
+## What Changes
+- **execution-handoff:** ADDED - structured contracts + apply surface.
+
+## Impact
+- lifecycle validate/archive/apply.
+
+-- openspec/changes/well-formed/tasks.md --
+## Milestone 1: Structured validation contract
+**Goal** — add the optional contract block.
+**Deliverables** — internal/validate/plan.go.
+**Validation contract** — checkable:
+  - go test ./internal/validate/... passes
+
+  ```contract
+  check: go test ./internal/validate/...
+  criteria: All validate package tests pass.
+  paths:
+    - internal/validate/**
+  ```
+**Steps** — s:
+  1. [x] write the parser
+  2. [x] write the tests
+
+## Milestone 2: No contract, untracked steps
+**Goal** — stay backward compatible.
+**Deliverables** — nothing new.
+**Validation contract** — checkable:
+  - manual review
+**Steps** — s:
+  1. legacy step, no checkbox
+
+-- openspec/changes/malformed-contract/proposal.md --
+---
+issue: "kentra-io/kafka-dq#43"
+---
+
+# Malformed contract
+
+## Why
+Exercise the refusal path.
+
+## What Changes
+- none (test fixture)
+
+## Impact
+- none
+
+-- openspec/changes/malformed-contract/tasks.md --
+## Milestone 1: Bad
+**Goal** — g.
+**Deliverables** — d.
+**Validation contract** — checkable:
+  - x
+
+  ```contract
+  check: ""
+  ```
+**Steps** — s:
+  1. [ ] step

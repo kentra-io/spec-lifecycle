@@ -7,9 +7,14 @@
 // M0 wired the binary skeleton and `--version` reporting. M2 added
 // `validate` (plan §2.3/§4). M3 added `approve` and `status` (plan §2.6).
 // M4 added `archive` (plan §2.5) and the baseline ledger. M5 added `guard`
-// (plan §2.4) and wired it as a post-archive self-check. M6 (this
-// milestone) adds `init` (plan §2.9/§4): the native scaffold and
-// integration wiring — all 6 v1 verbs are now live.
+// (plan §2.4) and wired it as a post-archive self-check. M6 added `init`
+// (plan §2.9/§4): the native scaffold and integration wiring — all 6 v1
+// verbs were live. A later addendum (harness orchestration.md §5.5) added
+// `apply` — a read-only, machine-readable projection of a change's
+// tasks.md milestones + validation contracts, consumed by the
+// orchestration module's read_plan step — plus the tasks-completion gate
+// and structured validation-contract additions to `archive` and
+// `validate` respectively.
 package main
 
 import (
@@ -39,6 +44,7 @@ func run(ctx context.Context, args []string) error {
 			statusCommand(),
 			archiveCommand(),
 			guardCommand(),
+			applyCommand(),
 		},
 	}
 	return cmd.Run(ctx, args)

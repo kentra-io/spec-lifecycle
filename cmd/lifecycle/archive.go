@@ -18,12 +18,13 @@ import (
 // Exit codes for `lifecycle archive` (spec-lifecycle.md §6.2,
 // implementation-plan.md §2.5, internal/archive/doc.go): 0 ok (the
 // change was archived: fold + relocate + ledger append all succeeded), 1
-// refused (a required gate is not approved, a conflicting in-flight
-// change was found, or the delta does not fold cleanly — nothing was
-// written; --force-gates/--force-conflicts bypass the first two), 2
-// could not run (bad flags/usage, no openspec/ project root, a missing
-// change folder, an environment failure, or the post-write self-check
-// failing).
+// refused (a required gate is not approved, tasks.md has an unchecked
+// tracked step, a conflicting in-flight change was found, or the delta
+// does not fold cleanly — nothing was written;
+// --force-gates/--force-incomplete-tasks/--force-conflicts bypass the
+// first three), 2 could not run (bad flags/usage, no openspec/ project
+// root, a missing change folder, an environment failure, or the
+// post-write self-check failing).
 const (
 	archiveExitRefused     = 1
 	archiveExitCouldNotRun = 2
@@ -39,6 +40,12 @@ func archiveCommand() *cli.Command {
 			"                    this change's type must be approved (or, for design,\n" +
 			"                    legitimately skipped). Refuses by default; --force-gates\n" +
 			"                    overrides (recorded).\n" +
+			"  1b. tasks-completion gate — refuses if tasks.md declares any\n" +
+			"                    checkbox-tracked Steps item (\"<n>. [ ]\"/\"<n>. [x]\")\n" +
+			"                    that is not checked (harness orchestration.md §5.5). A\n" +
+			"                    change with no tasks.md, or whose Steps carry no\n" +
+			"                    checkboxes at all, is never gated. Refuses by default;\n" +
+			"                    --force-incomplete-tasks overrides (recorded).\n" +
 			"  2. conflict-check — refuses if another in-flight change's delta touches\n" +
 			"                    (MODIFIED/REMOVED/RENAMED) a requirement this change\n" +
 			"                    also touches. --force-conflicts overrides (recorded).\n" +
@@ -59,13 +66,15 @@ func archiveCommand() *cli.Command {
 			"                    self-check (§2.5 step 5) — a guard problem is surfaced\n" +
 			"                    loudly (non-zero exit) even though the archive itself\n" +
 			"                    already committed.\n\n" +
-			"Exit codes: 0 ok, 1 refused (gate/conflict/fold — nothing written), 2\n" +
+			"Exit codes: 0 ok, 1 refused (gate/tasks-completion/conflict/fold —\n" +
+			"nothing written), 2\n" +
 			"could not run (bad flags, no openspec/ tree, missing change folder, an\n" +
 			"environment failure, an internal self-check failure, or a post-archive\n" +
 			"guard problem). Run from a spec-lifecycle project root (a directory\n" +
 			"containing openspec/).",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{Name: "force-gates", Usage: "archive even though a required gate is not approved (recorded on every ledger record)"},
+			&cli.BoolFlag{Name: "force-incomplete-tasks", Usage: "archive even though tasks.md has an unchecked tracked step (recorded on every ledger record)"},
 			&cli.BoolFlag{Name: "force-conflicts", Usage: "archive even though another in-flight change touches the same requirement (recorded on every ledger record)"},
 			&cli.StringFlag{Name: "format", Value: "text", Usage: "output format: text|json"},
 		},
@@ -106,10 +115,11 @@ func runArchive(cmd *cli.Command) error {
 	}
 
 	req := archive.Request{
-		Root:           cwd,
-		Change:         change,
-		ForceGates:     cmd.Bool("force-gates"),
-		ForceConflicts: cmd.Bool("force-conflicts"),
+		Root:                 cwd,
+		Change:               change,
+		ForceGates:           cmd.Bool("force-gates"),
+		ForceConflicts:       cmd.Bool("force-conflicts"),
+		ForceIncompleteTasks: cmd.Bool("force-incomplete-tasks"),
 	}
 
 	res, err := archive.Archive(req)
@@ -178,6 +188,7 @@ func postArchiveGuard(cmd *cli.Command, root string) error {
 func mapArchiveError(err error) error {
 	switch {
 	case errors.Is(err, archive.ErrGatesNotApproved),
+		errors.Is(err, archive.ErrTasksIncomplete),
 		errors.Is(err, archive.ErrConflict),
 		errors.Is(err, archive.ErrFoldFailed):
 		return &exitError{err: err, code: archiveExitRefused}

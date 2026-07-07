@@ -10,7 +10,7 @@ Companion primitive to [`adr-sourced-constitution`](https://github.com/kentra-io
 
 ## Shape
 
-- **Layer 1** — `lifecycle` CLI (Go, deterministic, no LLM): `init` · `approve` · `status` · `guard`
+- **Layer 1** — `lifecycle` CLI (Go, deterministic, no LLM): `init` · `validate` · `approve` · `status` · `archive` · `guard` · `apply`
 - **Layer 2** — agent-agnostic skills (SKILL.md standard): stage conduct, bug repro-first flow, archive discipline
 - **Layer 3** — integrations: a custom OpenSpec schema (`kentra`), the constitution seam, engine/CI record consumers
 

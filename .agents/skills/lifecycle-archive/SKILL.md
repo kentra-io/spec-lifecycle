@@ -23,21 +23,26 @@ there is no `openspec archive` to shell out to (spec-lifecycle.md §6.2).
    ```
    lifecycle archive <change>
    ```
-   This gate-checks (refusing on any un-approved required stage),
-   conflict-checks (refusing loudly if another in-flight change's delta
-   touches a requirement — `MODIFIED`/`REMOVED`/`RENAMED` — that this
-   change also touches; never a silent drop), records pre-image digests,
-   folds the delta into `openspec/specs/<capability>/spec.md` (a
-   delta-less bug change skips the fold), relocates the folder to
-   `openspec/changes/archive/<change>/`, records post-image digests,
-   appends the ledger record(s) with the next monotonic `seq`, and then
-   runs the full `lifecycle guard` as a post-archive self-check.
+   This gate-checks (refusing on any un-approved required stage), runs the
+   tasks-completion gate (refusing if `tasks.md` declares any
+   `[ ]`/`[x]`-tracked Steps item that is not checked — harness
+   orchestration.md §5.5; a `tasks.md` with no tracked steps at all, or no
+   `tasks.md`, is never gated by this), conflict-checks (refusing loudly
+   if another in-flight change's delta touches a requirement —
+   `MODIFIED`/`REMOVED`/`RENAMED` — that this change also touches; never a
+   silent drop), records pre-image digests, folds the delta into
+   `openspec/specs/<capability>/spec.md` (a delta-less bug change skips
+   the fold), relocates the folder to `openspec/changes/archive/<change>/`,
+   records post-image digests, appends the ledger record(s) with the next
+   monotonic `seq`, and then runs the full `lifecycle guard` as a
+   post-archive self-check.
 3. **Interpret the exit code:**
    - `0` — archived cleanly and the post-archive guard self-check passed.
      Tell the human it archived; nothing further to do.
-   - `1` — refused: an un-approved required gate, a genuine cross-change
-     conflict, or a fold failure. Nothing was written. Go fix the
-     underlying gate/conflict and retry.
+   - `1` — refused: an un-approved required gate, an unchecked tracked
+     step in `tasks.md`, a genuine cross-change conflict, or a fold
+     failure. Nothing was written. Go fix the underlying gate/incomplete
+     step/conflict and retry.
    - `2` — either could not run at all (bad flags, no `openspec/` tree,
      missing change folder, an environment failure — nothing was written;
      fix the environment issue and retry), **or** the archive already
@@ -55,10 +60,11 @@ there is no `openspec archive` to shell out to (spec-lifecycle.md §6.2).
 - Never hand-edit anything under `openspec/changes/archive/` — it is the
   append-only event log; `lifecycle guard`'s immutability check exists to
   catch exactly this.
-- Never pass `--force-gates` or `--force-conflicts` without the human's
-  explicit, informed approval of what is being overridden — both flags are
-  recorded permanently on the resulting ledger record(s), so the human is
-  approving a durable admission, not a one-off convenience.
+- Never pass `--force-gates`, `--force-incomplete-tasks`, or
+  `--force-conflicts` without the human's explicit, informed approval of
+  what is being overridden — all three flags are recorded permanently on
+  the resulting ledger record(s), so the human is approving a durable
+  admission, not a one-off convenience.
 - Never treat archive exit `0` output alone as sufficient if you separately
   notice the post-archive guard step reported anything but clean — surface
   it to the human immediately rather than moving on.

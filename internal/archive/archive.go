@@ -64,6 +64,20 @@ func Archive(req Request) (Result, error) {
 			fmt.Sprintf("gate check overridden (--force-gates): %s", strings.Join(violations, "; ")))
 	}
 
+	// --- Step 1b: TASKS-COMPLETION GATE (harness orchestration.md §5.5) ---
+	incomplete, err := checkTasksComplete(changeDir)
+	if err != nil {
+		return Result{}, fmt.Errorf("%w: checking tasks completion: %w", ErrCouldNotRun, err)
+	}
+	if len(incomplete) > 0 {
+		if !req.ForceIncompleteTasks {
+			return Result{}, fmt.Errorf("%w: %s", ErrTasksIncomplete, strings.Join(incomplete, "; "))
+		}
+		result.TasksIncompleteOverridden = true
+		result.Warnings = append(result.Warnings,
+			fmt.Sprintf("tasks-completion gate overridden (--force-incomplete-tasks): %s", strings.Join(incomplete, "; ")))
+	}
+
 	hasDelta := validate.HasSpecsDeltas(changeDir)
 
 	var capabilities []string
@@ -191,30 +205,32 @@ func Archive(req Request) (Result, error) {
 	if hasDelta {
 		for _, fc := range folded {
 			records = append(records, Record{
-				Change:              req.Change,
-				Issue:               meta.Issue,
-				Capability:          fc.capability,
-				PreImageSha:         fc.preImage,
-				PostImageSha:        fc.postImage,
-				DeltaOps:            fc.deltaOps,
-				ArchiveManifestSha:  manifestSha,
-				GatesOverridden:     result.GatesOverridden,
-				ConflictsOverridden: result.ConflictsOverridden,
+				Change:                    req.Change,
+				Issue:                     meta.Issue,
+				Capability:                fc.capability,
+				PreImageSha:               fc.preImage,
+				PostImageSha:              fc.postImage,
+				DeltaOps:                  fc.deltaOps,
+				ArchiveManifestSha:        manifestSha,
+				GatesOverridden:           result.GatesOverridden,
+				ConflictsOverridden:       result.ConflictsOverridden,
+				TasksIncompleteOverridden: result.TasksIncompleteOverridden,
 			})
 		}
 	} else {
 		// Delta-less bug archive (doc.go): exactly one record, no
 		// capability affected.
 		records = append(records, Record{
-			Change:              req.Change,
-			Issue:               meta.Issue,
-			Capability:          "",
-			PreImageSha:         emptyImageSHA,
-			PostImageSha:        emptyImageSHA,
-			DeltaOps:            []DeltaOp{},
-			ArchiveManifestSha:  manifestSha,
-			GatesOverridden:     result.GatesOverridden,
-			ConflictsOverridden: result.ConflictsOverridden,
+			Change:                    req.Change,
+			Issue:                     meta.Issue,
+			Capability:                "",
+			PreImageSha:               emptyImageSHA,
+			PostImageSha:              emptyImageSHA,
+			DeltaOps:                  []DeltaOp{},
+			ArchiveManifestSha:        manifestSha,
+			GatesOverridden:           result.GatesOverridden,
+			ConflictsOverridden:       result.ConflictsOverridden,
+			TasksIncompleteOverridden: result.TasksIncompleteOverridden,
 		})
 	}
 

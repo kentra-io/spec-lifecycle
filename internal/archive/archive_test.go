@@ -249,6 +249,118 @@ func TestArchiveBugDeltaless(t *testing.T) {
 	}
 }
 
+// --- tasks-completion gate ---
+
+const tasksWithUncheckedStep = `## Milestone 1: Password login
+**Goal** — implement login.
+**Deliverables** — login handler.
+**Validation contract** — checkable:
+  - go test ./... passes
+**Steps** — s:
+  1. [x] write the handler
+  2. [ ] write the tests
+`
+
+const tasksAllChecked = `## Milestone 1: Password login
+**Goal** — implement login.
+**Deliverables** — login handler.
+**Validation contract** — checkable:
+  - go test ./... passes
+**Steps** — s:
+  1. [x] write the handler
+  2. [x] write the tests
+`
+
+func TestArchiveRefusesOnIncompleteTasks(t *testing.T) {
+	root := newProjectRoot(t)
+	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
+	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+
+	_, err := Archive(Request{Root: root, Change: "001-add-login"})
+	if !errors.Is(err, ErrTasksIncomplete) {
+		t.Fatalf("err = %v, want ErrTasksIncomplete", err)
+	}
+	if !contains(err.Error(), "write the tests") {
+		t.Errorf("error message %q should name the unchecked step", err.Error())
+	}
+
+	// Nothing should have moved or been written.
+	if _, statErr := os.Stat(changeDir); statErr != nil {
+		t.Errorf("change folder was relocated despite refusal: %v", statErr)
+	}
+	if _, statErr := os.Stat(LedgerPath(root)); !os.IsNotExist(statErr) {
+		t.Errorf("ledger file exists despite refusal (stat err = %v)", statErr)
+	}
+}
+
+func TestArchiveForceIncompleteTasksOverride(t *testing.T) {
+	root := newProjectRoot(t)
+	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
+	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+
+	res, err := Archive(Request{Root: root, Change: "001-add-login", ForceIncompleteTasks: true})
+	if err != nil {
+		t.Fatalf("Archive: %v", err)
+	}
+	if !res.TasksIncompleteOverridden {
+		t.Error("Result.TasksIncompleteOverridden = false, want true")
+	}
+	if len(res.Records) != 1 || !res.Records[0].TasksIncompleteOverridden {
+		t.Fatalf("Records = %+v, want exactly one with TasksIncompleteOverridden = true", res.Records)
+	}
+}
+
+func TestArchiveAllowsAllStepsChecked(t *testing.T) {
+	root := newProjectRoot(t)
+	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
+	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksAllChecked)
+	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+
+	res, err := Archive(Request{Root: root, Change: "001-add-login"})
+	if err != nil {
+		t.Fatalf("Archive: %v", err)
+	}
+	if res.TasksIncompleteOverridden {
+		t.Error("TasksIncompleteOverridden = true, want false (nothing to override)")
+	}
+}
+
+func TestArchiveAllowsNoTasksFile(t *testing.T) {
+	// No tasks.md at all — the gate must stay a no-op (backward
+	// compatible with every change that predates checkbox tracking).
+	root := newProjectRoot(t)
+	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
+	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+
+	_, err := Archive(Request{Root: root, Change: "001-add-login"})
+	if err != nil {
+		t.Fatalf("Archive: %v (tasks-completion gate must not block a change with no tasks.md)", err)
+	}
+}
+
+func TestArchiveAllowsUntrackedSteps(t *testing.T) {
+	// Legacy-style Steps (no checkboxes at all) must not be gated either.
+	root := newProjectRoot(t)
+	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
+	writeFile(t, filepath.Join(changeDir, "tasks.md"), `## Milestone 1: Password login
+**Goal** — implement login.
+**Deliverables** — login handler.
+**Validation contract** — checkable:
+  - go test ./... passes
+**Steps** — s:
+  1. write the handler
+  2. write the tests
+`)
+	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+
+	_, err := Archive(Request{Root: root, Change: "001-add-login"})
+	if err != nil {
+		t.Fatalf("Archive: %v (untracked Steps must not be gated)", err)
+	}
+}
+
 // --- conflict-check ---
 
 func TestArchiveConflictRefusesThenForceOverrideResolves(t *testing.T) {

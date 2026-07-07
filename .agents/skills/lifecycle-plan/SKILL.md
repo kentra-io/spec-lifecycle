@@ -38,6 +38,21 @@ to execution too, spec-lifecycle.md §3.1). `lifecycle validate --stage plan`
 enforces that every milestone carries all four labels and at least one
 checkable line under Validation contract — it is not advisory here.
 
+Two OPTIONAL, opt-in additions on top of the fixed shape above (harness
+orchestration.md §5.5's execution handoff — the template shows both):
+a `[ ]`/`[x]` checkbox on each Steps line (once any step in a milestone
+is tracked this way, `lifecycle archive` refuses to archive the change
+until every tracked step in it is checked — an escape hatch,
+`--force-incomplete-tasks`, always exists), and a fenced ` ```contract `
+block inside Validation contract carrying a single executable
+acceptance-check command, plain-language criteria, and the allowed
+path-set an execution engine confines this milestone's diff to. Neither
+is required — a milestone with plain, untracked Steps and no
+` ```contract ` block still validates exactly as before. When present,
+`lifecycle validate --stage plan` enforces the block is well-formed, and
+`lifecycle apply <change> --format json` is how an execution engine reads
+every milestone's contract back out without parsing markdown itself.
+
 ## The constitution seam (spec-lifecycle.md §7) — re-run, don't reuse
 
 The constitution may have moved since gate 2 (an accepted ADR from the
