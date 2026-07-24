@@ -3,7 +3,8 @@ id: ADR-0002
 title: Prove format compatibility with a static conformance corpus, not a runtime pin
 category: architecture
 date: 2026-07-05
-status: accepted
+status: superseded
+superseded-by: ADR-0005
 ---
 
 ## Context and Problem Statement

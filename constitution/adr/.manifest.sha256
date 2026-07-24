@@ -1,3 +1,5 @@
 a5666783f9cd617a06443363336f3960e4a50d08a5e57727a983fe8bbf45b38b  ADR-0001-reimplement-the-openspec-format-natively-in-pure-go-no-node-runtime.md
 40766b6a9158866f56ec53914a5529e3fe04048441e4d8dce334c0c479f69c95  ADR-0002-prove-format-compatibility-with-a-static-conformance-corpus-not-a-runtime-pin.md
 a8a7c6565dbe0ac5e2d22a6c82b8d27109af1cf6b30d9f19e35165d042ed2103  ADR-0003-the-archive-ledger-s-monotonic-seq-is-the-sole-authoritative-history-order.md
+f569dcb3d85efebc224d548c2cf26df81846b264b4d233306af89dace39b9b9a  ADR-0004-own-a-native-yaml-spec-format-described-by-a-published-json-schema.md
+93619bc99821727d8dac0ee65d69fc2cd611a4c5655cf741e45b632ba26a7423  ADR-0005-prove-correctness-with-golden-projection-fixtures-and-from-empty-replay.md

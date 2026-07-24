@@ -3,7 +3,8 @@ id: ADR-0001
 title: Reimplement the OpenSpec format natively in pure Go — no Node runtime
 category: architecture
 date: 2026-07-05
-status: accepted
+status: superseded
+superseded-by: ADR-0004
 ---
 
 ## Context and Problem Statement
