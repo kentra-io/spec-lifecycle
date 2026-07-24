@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,6 +24,8 @@ func TestInstallWritesExpectedTree(t *testing.T) {
 		"templates/spec.md",
 		"templates/design.md",
 		"templates/tasks.md",
+		"living-spec.schema.json",
+		"spec-delta.schema.json",
 	}
 	for _, rel := range wantFiles {
 		path := filepath.Join(root, filepath.FromSlash(rel))
@@ -118,8 +121,8 @@ func TestVerifyReportsMissingDescriptorEntirely(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if len(mismatches) != 5 { // schema.yaml + 4 templates
-		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 5", len(mismatches))
+	if len(mismatches) != 7 { // schema.yaml + 4 templates + 2 published JSON Schemas
+		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 7", len(mismatches))
 	}
 	for _, m := range mismatches {
 		if m.Reason != "missing" {
@@ -181,6 +184,32 @@ func TestVerifyPropagatesNonNotExistReadError(t *testing.T) {
 
 	if _, err := Verify(dir); err == nil {
 		t.Fatal("Verify: want error when an installed file cannot be read, got nil")
+	}
+}
+
+// TestPublishedSchemasAreWellFormed guards the two published JSON Schemas
+// (change 007, design D4): each must be present under PublishedSchema and
+// parse as JSON carrying the $id the delta schema's cross-file $ref and the
+// in-process validator both resolve against.
+func TestPublishedSchemasAreWellFormed(t *testing.T) {
+	for _, name := range []string{LivingSpecSchemaName, SpecDeltaSchemaName} {
+		data, err := PublishedSchema(name)
+		if err != nil {
+			t.Fatalf("PublishedSchema(%q): %v", name, err)
+		}
+		var doc struct {
+			Schema string `json:"$schema"`
+			ID     string `json:"$id"`
+		}
+		if err := json.Unmarshal(data, &doc); err != nil {
+			t.Fatalf("%s is not valid JSON: %v", name, err)
+		}
+		if doc.Schema != "https://json-schema.org/draft/2020-12/schema" {
+			t.Errorf("%s $schema = %q, want draft 2020-12", name, doc.Schema)
+		}
+		if doc.ID == "" {
+			t.Errorf("%s is missing an $id (needed for $ref resolution)", name)
+		}
 	}
 }
 

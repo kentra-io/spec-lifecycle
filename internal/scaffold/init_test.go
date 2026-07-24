@@ -110,7 +110,7 @@ func TestRunInit_FreshRepoWritesEverything(t *testing.T) {
 	if cfg.ConsentPolicy != config.ConsentStrict {
 		t.Errorf("ConsentPolicy = %q, want %q", cfg.ConsentPolicy, config.ConsentStrict)
 	}
-	if cfg.SpecFormat.Convention != config.ConventionOpenSpec || cfg.SpecFormat.Grammar != "1.5.0" {
+	if cfg.SpecFormat.Convention != config.ConventionOpenSpec || cfg.SpecFormat.Grammar != config.GrammarYAML {
 		t.Errorf("SpecFormat = %+v", cfg.SpecFormat)
 	}
 	if len(cfg.Runtimes) != 3 {

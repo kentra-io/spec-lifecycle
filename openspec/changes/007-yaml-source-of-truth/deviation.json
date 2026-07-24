@@ -2,6 +2,19 @@
   "generatedAt": "2026-07-24T14:45:00Z",
   "constitutionHash": "sha256:29f16cbc9f700f2c9e312fad0612351411b1d2e1f6c7ab937c2541ff5b7966ed",
   "plan": "openspec/changes/007-yaml-source-of-truth/tasks.md",
-  "deviations": [],
-  "summary": { "critical": 0, "high": 0, "medium": 0, "low": 0 }
+  "deviations": [
+    {
+      "id": "M1-DEV-001",
+      "loggedBy": "implementer",
+      "milestone": 1,
+      "taskId": "Milestone 1, step 4 (internal/config specFormat YAML mode) + deliverable \"lifecycle.yml/config.Default() seed the YAML format vocabulary\"",
+      "specSection": "specs/spec-format/spec.md — \"YAML is the source of truth for the living spec and spec deltas\" (the tool must operate in YAML mode); design D1/D4",
+      "planSaid": "Update internal/config so config.Default() (and lifecycle.yml) seed the YAML format vocabulary and the tool operates in YAML mode. M1's inferred path-set (from its deliverables/steps) is internal/spec, internal/schema, internal/config, lifecycle.yml, and go.mod/go.sum. internal/scaffold is NOT named by any M1 deliverable or step, and the M1 validation contract runs tests only for ./internal/spec/... ./internal/schema/... ./internal/config/...",
+      "intendedChange": "config.Default() now seeds SpecFormat.Grammar = config.GrammarYAML (\"yaml\") instead of the old OpenSpec markdown pin \"1.5.0\" (required by the M1 deliverable). This invalidates a coupled assertion in internal/scaffold/init_test.go (TestRunInit_FreshRepoWritesEverything, ~line 114) which asserts the seeded config's Grammar == \"1.5.0\". The needed fix is a one-line update of that expectation to config.GrammarYAML. internal/scaffold is outside M1's path-set, so I am NOT making that edit; I am logging it and halting on it for approval.",
+      "reason": "The change to config.Default() is an explicit, required M1 deliverable, but the only file that must change to keep `go test ./internal/scaffold/...` green is outside M1's inferred path-set. Per working rules 3 and 5, an out-of-path edit is a logged deviation, never a silent decision.",
+      "blastRadius": "One assertion line in one test file (internal/scaffold/init_test.go); no production code. internal/scaffold's runtime behavior is unchanged — RunInit already relays whatever config.Default() seeds; only the test's hard-coded expected grammar string is stale. M1's own declared validation criteria (CGO_ENABLED=0 go build ./... ; go test ./internal/spec/... ./internal/schema/... ./internal/config/...) are unaffected and pass.",
+      "status": "APPROVED"
+    }
+  ],
+  "summary": { "critical": 0, "high": 0, "medium": 0, "low": 1 }
 }

@@ -64,6 +64,29 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+// TestYAMLGrammarAdmitted confirms the tool operates in YAML mode (change
+// 007): a config declaring the YAML grammar under the kept openspec layout
+// name loads clean, and an omitted grammar defaults to YAML.
+func TestYAMLGrammarAdmitted(t *testing.T) {
+	path := write(t, "schemaVersion: 1\nspecFormat: { convention: openspec, grammar: yaml }\n")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() error = %v, want the YAML format to be admitted", err)
+	}
+	if cfg.SpecFormat.Grammar != GrammarYAML {
+		t.Errorf("SpecFormat.Grammar = %q, want %q", cfg.SpecFormat.Grammar, GrammarYAML)
+	}
+
+	def := write(t, "schemaVersion: 1\nspecFormat: { convention: openspec }\n")
+	cfg2, err := Load(def)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg2.SpecFormat.Grammar != GrammarYAML {
+		t.Errorf("default SpecFormat.Grammar = %q, want %q", cfg2.SpecFormat.Grammar, GrammarYAML)
+	}
+}
+
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load(filepath.Join(t.TempDir(), "does-not-exist.yml"))
 	if err == nil {
@@ -146,8 +169,8 @@ func TestDefault(t *testing.T) {
 	if cfg.ConsentPolicy != ConsentStrict {
 		t.Errorf("ConsentPolicy = %q, want %q", cfg.ConsentPolicy, ConsentStrict)
 	}
-	if cfg.SpecFormat.Convention != ConventionOpenSpec || cfg.SpecFormat.Grammar != "1.5.0" {
-		t.Errorf("SpecFormat = %+v", cfg.SpecFormat)
+	if cfg.SpecFormat.Convention != ConventionOpenSpec || cfg.SpecFormat.Grammar != GrammarYAML {
+		t.Errorf("SpecFormat = %+v, want convention=%q grammar=%q", cfg.SpecFormat, ConventionOpenSpec, GrammarYAML)
 	}
 	if len(cfg.Runtimes) != 3 {
 		t.Errorf("Runtimes = %v, want 3 defaults", cfg.Runtimes)
