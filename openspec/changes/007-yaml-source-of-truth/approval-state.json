@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "change": "007-yaml-source-of-truth",
+  "issue": "kentra-io/spec-lifecycle#7",
+  "gates": [
+    {
+      "stage": "refine",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {
+        "proposal.md": "sha256:74f0c62b1cff34fd35caf8337c01203a2e108c17635a9df274367974841a692b",
+        "specs/plan-integration/spec.md": "sha256:92935a69fbd92ac25e7ffe5194746a22ff198aca3670e162e304bf40fde50f88",
+        "specs/spec-format/spec.md": "sha256:228b078d1a4a24257a79179c97f47b3b371b491f73b914d25a4b73f0b164f466",
+        "specs/status-reporting/spec.md": "sha256:d1e79b3600546357b4aa378d40f2356658112c00a2e1cfa99ea3c0697cbf7938"
+      },
+      "constitutionHash": "sha256:cfc905e3ebb6d86dc789907d6dcf7343a22ddf8a712f3bd59086adf8c077e7a3",
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "agent",
+      "approvedAt": "2026-07-24T13:40:53Z",
+      "notes": ""
+    },
+    {
+      "stage": "design",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {
+        "design.md": "sha256:628e3310a72fe9f5a1c65f314a6af0eb0e0bc666c4db38918b705dfbe2a87bba"
+      },
+      "constitutionHash": "sha256:29f16cbc9f700f2c9e312fad0612351411b1d2e1f6c7ab937c2541ff5b7966ed",
+      "deviationConstitutionHash": "sha256:29f16cbc9f700f2c9e312fad0612351411b1d2e1f6c7ab937c2541ff5b7966ed",
+      "deviationRef": "deviation.json",
+      "approvedBy": "agent",
+      "approvedAt": "2026-07-24T14:27:05Z",
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+## ADDED Requirements
+
+### Requirement: The plan-stage gate validates the plan via milestoned-plan-dag
+
+The plan-stage validation SHALL delegate to `milestoned-plan-dag validate`
+over the change's plan YAML (a CLI boundary, no in-process import), passing
+the gate only when the plan primitive reports the plan valid.
+
+#### Scenario: an invalid plan fails the plan-stage gate
+
+- **GIVEN** a change whose plan YAML `milestoned-plan-dag validate` reports
+  as invalid
+- **WHEN** the plan stage is validated
+- **THEN** the gate fails and surfaces the plan primitive's validation error
+
+#### Scenario: a valid plan passes the plan-stage gate
+
+- **GIVEN** a change whose plan YAML `milestoned-plan-dag validate` reports
+  as valid
+- **WHEN** the plan stage is validated
+- **THEN** the gate passes
+
+### Requirement: The archive step-completion gate reads done-states from the plan primitive
+
+The archive step-completion gate SHALL read milestone done-states from
+`milestoned-plan-dag resolve` instead of parsing a `tasks.md`, refusing to
+archive while the plan reports outstanding milestones.
+
+#### Scenario: archive is blocked by an outstanding milestone
+
+- **GIVEN** a change whose `milestoned-plan-dag resolve` reports at least one
+  milestone not done
+- **WHEN** `lifecycle archive` runs
+- **THEN** archiving is refused and the outstanding milestone is named
+
+### Requirement: The machine plan surface is milestoned-plan-dag, not lifecycle
+
+The machine-readable plan surface SHALL be `milestoned-plan-dag resolve`;
+the tool SHALL NOT provide a `lifecycle apply` verb, and the schema
+descriptor SHALL NOT declare a `tasks.md` template or a `tasks` artifact.
+
+#### Scenario: no lifecycle apply verb or tasks artifact
+
+- **GIVEN** an initialized spec-lifecycle project
+- **WHEN** its verbs and schema descriptor are inspected
+- **THEN** there is no `lifecycle apply` verb, and the schema descriptor
+  declares neither a `tasks.md` template nor a `tasks` artifact
