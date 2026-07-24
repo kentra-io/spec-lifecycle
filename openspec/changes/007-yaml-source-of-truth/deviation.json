@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-24T13:57:39Z",
+  "generatedAt": "2026-07-24T14:45:00Z",
   "constitutionHash": "sha256:29f16cbc9f700f2c9e312fad0612351411b1d2e1f6c7ab937c2541ff5b7966ed",
-  "plan": "openspec/changes/007-yaml-source-of-truth/design.md",
+  "plan": "openspec/changes/007-yaml-source-of-truth/tasks.md",
   "deviations": [],
   "summary": { "critical": 0, "high": 0, "medium": 0, "low": 0 }
 }
