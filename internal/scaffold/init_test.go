@@ -12,6 +12,7 @@ import (
 
 	"github.com/kentra-io/spec-lifecycle/internal/config"
 	"github.com/kentra-io/spec-lifecycle/internal/constitution"
+	"github.com/kentra-io/spec-lifecycle/internal/plandag"
 	"github.com/kentra-io/spec-lifecycle/internal/schema"
 )
 
@@ -53,6 +54,9 @@ func noConstitutionEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("PATH", "")
 	t.Setenv(constitution.EnvBinOverride, "")
+	// The milestoned-plan-dag preflight (change 007, M5) resolves the same
+	// way; isolate it too so "missing binary" assertions are deterministic.
+	t.Setenv(plandag.EnvBinOverride, "")
 }
 
 func newInitOpts(root string) InitOptions {
@@ -353,6 +357,27 @@ func TestRunInit_ConstitutionPreflight_MissingBinary(t *testing.T) {
 	// init must still succeed end to end even with the companion absent.
 	if _, err := os.Stat(filepath.Join(root, "lifecycle.yml")); err != nil {
 		t.Errorf("lifecycle.yml not written despite the missing constitution binary: %v", err)
+	}
+}
+
+// TestRunInit_PlanDAGPreflight_MissingBinaryWarns covers the
+// milestoned-plan-dag preflight (change 007, Milestone 5, design D6): an
+// absent companion binary is a WARNING, never a failure — the same
+// warn-not-fail posture as the constitution preflight. init must still
+// succeed end to end with the plan primitive absent.
+func TestRunInit_PlanDAGPreflight_MissingBinaryWarns(t *testing.T) {
+	root := t.TempDir()
+	noConstitutionEnv(t)
+
+	res, err := RunInit(newInitOpts(root))
+	if err != nil {
+		t.Fatalf("RunInit: %v", err)
+	}
+	if !anyWarningContains(res.Warnings, "milestoned-plan-dag binary not found") {
+		t.Errorf("Warnings = %v, want a missing-milestoned-plan-dag notice", res.Warnings)
+	}
+	if _, err := os.Stat(filepath.Join(root, "lifecycle.yml")); err != nil {
+		t.Errorf("lifecycle.yml not written despite the missing plan-dag binary: %v", err)
 	}
 }
 

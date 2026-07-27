@@ -5,28 +5,13 @@ import (
 	"testing"
 )
 
-// --- ```contract block: validatePlan structural checks ---
+// The plan-stage gate no longer parses tasks.md (change 007, Milestone 5 —
+// it delegates to milestoned-plan-dag over plan.yaml; see
+// plan_gate_test.go). ParseMilestones and its ```contract parsing survive
+// only for the `lifecycle apply --format json` surface until Milestone 6
+// retires them, so their unit coverage stays here.
 
-func TestTasksNoContractBlockStillValid(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. step one
-`)
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	if len(findings) != 0 {
-		t.Errorf("findings = %+v, want none (a contract-less milestone must still validate — backward compatible)", findings)
-	}
-}
-
-func TestTasksWellFormedContractBlockValid(t *testing.T) {
+func TestParseMilestonesWellFormedContractBlock(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
 		"**Goal** — implement login.\n"+
@@ -43,14 +28,6 @@ func TestTasksWellFormedContractBlockValid(t *testing.T) {
 		"  ```\n"+
 		"**Steps** — s:\n"+
 		"  1. step one\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	if len(findings) != 0 {
-		t.Errorf("findings = %+v, want none (well-formed contract block)", findings)
-	}
 
 	ms, ok, err := ParseMilestones(dir)
 	if err != nil || !ok {
@@ -74,31 +51,7 @@ func TestTasksWellFormedContractBlockValid(t *testing.T) {
 	}
 }
 
-func TestTasksMalformedContractBlockYAML(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
-		"**Goal** — implement login.\n"+
-		"**Deliverables** — login handler.\n"+
-		"**Validation contract** — checkable:\n"+
-		"  - go test ./... passes\n"+
-		"\n"+
-		"  ```contract\n"+
-		"  check: [this is not: valid: yaml\n"+
-		"  ```\n"+
-		"**Steps** — s:\n"+
-		"  1. step one\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "malformed_contract") {
-		t.Errorf("findings = %v, want malformed_contract", kinds)
-	}
-}
-
-func TestTasksMalformedContractMissingFields(t *testing.T) {
+func TestParseMilestonesMalformedContractNeverTrusted(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
 		"**Goal** — implement login.\n"+
@@ -112,107 +65,12 @@ func TestTasksMalformedContractMissingFields(t *testing.T) {
 		"**Steps** — s:\n"+
 		"  1. step one\n")
 
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "malformed_contract") {
-		t.Errorf("findings = %v, want malformed_contract (missing check/criteria/paths)", kinds)
-	}
-
 	ms, ok, err := ParseMilestones(dir)
 	if err != nil || !ok {
 		t.Fatalf("ParseMilestones: ok=%v err=%v", ok, err)
 	}
 	if ms[0].Contract != nil {
 		t.Errorf("Contract = %+v, want nil (malformed contract is never trusted)", ms[0].Contract)
-	}
-}
-
-func TestTasksContractAbsolutePathRejected(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
-		"**Goal** — g.\n"+
-		"**Deliverables** — d.\n"+
-		"**Validation contract** — checkable:\n"+
-		"  - x\n"+
-		"\n"+
-		"  ```contract\n"+
-		"  check: go test ./...\n"+
-		"  criteria: fine\n"+
-		"  paths:\n"+
-		"    - /etc/passwd\n"+
-		"  ```\n"+
-		"**Steps** — s:\n"+
-		"  1. step one\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "malformed_contract") {
-		t.Errorf("findings = %v, want malformed_contract (absolute path)", kinds)
-	}
-}
-
-func TestTasksContractTraversalPathRejected(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
-		"**Goal** — g.\n"+
-		"**Deliverables** — d.\n"+
-		"**Validation contract** — checkable:\n"+
-		"  - x\n"+
-		"\n"+
-		"  ```contract\n"+
-		"  check: go test ./...\n"+
-		"  criteria: fine\n"+
-		"  paths:\n"+
-		"    - ../../etc/passwd\n"+
-		"  ```\n"+
-		"**Steps** — s:\n"+
-		"  1. step one\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "malformed_contract") {
-		t.Errorf("findings = %v, want malformed_contract (parent traversal)", kinds)
-	}
-}
-
-func TestTasksDuplicateContractBlockRejected(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), "## Milestone 1: Password login\n"+
-		"**Goal** — g.\n"+
-		"**Deliverables** — d.\n"+
-		"**Validation contract** — checkable:\n"+
-		"  - x\n"+
-		"\n"+
-		"  ```contract\n"+
-		"  check: go test ./...\n"+
-		"  criteria: fine\n"+
-		"  paths: [internal/a/**]\n"+
-		"  ```\n"+
-		"\n"+
-		"  ```contract\n"+
-		"  check: go test ./...\n"+
-		"  criteria: fine\n"+
-		"  paths: [internal/b/**]\n"+
-		"  ```\n"+
-		"**Steps** — s:\n"+
-		"  1. step one\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "duplicate_contract") {
-		t.Errorf("findings = %v, want duplicate_contract", kinds)
 	}
 }
 

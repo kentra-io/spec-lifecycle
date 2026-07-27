@@ -139,18 +139,8 @@ func TestChangeDesignHappyPath(t *testing.T) {
 	}
 }
 
-func TestChangePlanHappyPath(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), validTasks)
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	if len(findings) != 0 {
-		t.Errorf("Change(plan) on a well-formed tasks.md = %+v, want no findings", findings)
-	}
-}
+// The plan-stage happy path now delegates to milestoned-plan-dag over
+// plan.yaml — see plan_gate_test.go (TestValidatePlanValidPasses).
 
 func TestChangeUnrecognizedStage(t *testing.T) {
 	dir := t.TempDir()
@@ -389,9 +379,14 @@ func TestDesignNFRDischargeHyphenatedHeadingAccepted(t *testing.T) {
 	}
 }
 
-// --- tasks.md ---
+// --- plan stage (plan.yaml, via milestoned-plan-dag) ---
+//
+// The plan-stage gate delegates to milestoned-plan-dag over plan.yaml
+// (change 007, Milestone 5). A change with no plan.yaml is a
+// missing_artifact; the valid / invalid delegation paths are covered in
+// plan_gate_test.go.
 
-func TestTasksMissingFile(t *testing.T) {
+func TestPlanMissingArtifact(t *testing.T) {
 	dir := t.TempDir()
 	findings, err := Change(dir, StagePlan)
 	if err != nil {
@@ -399,93 +394,7 @@ func TestTasksMissingFile(t *testing.T) {
 	}
 	kinds := findingKinds(findings)
 	if !contains(kinds, "missing_artifact") {
-		t.Errorf("findings = %v, want missing_artifact", kinds)
-	}
-}
-
-func TestTasksNoMilestoneHeadings(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), "- [ ] just a checkbox, no milestone heading\n")
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "no_milestone_headings") {
-		t.Errorf("findings = %v, want no_milestone_headings", kinds)
-	}
-}
-
-func TestTasksMissingLabel(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Steps** — do it.
-`)
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	var found bool
-	for _, f := range findings {
-		if f.Kind == "missing_milestone_label" {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("findings = %+v, want a missing_milestone_label finding for the omitted Validation contract label", findings)
-	}
-}
-
-func TestTasksEmptyValidationContract(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** —
-**Steps** — do it.
-`)
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	kinds := findingKinds(findings)
-	if !contains(kinds, "empty_validation_contract") {
-		t.Errorf("findings = %v, want empty_validation_contract", kinds)
-	}
-}
-
-func TestTasksMultipleMilestonesOneBad(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "tasks.md"), `## Milestone 1: Good
-**Goal** — g.
-**Deliverables** — d.
-**Validation contract** — checkable:
-  - x passes
-**Steps** — s:
-  1. step
-
-## Milestone 2: Bad
-**Goal** — g.
-**Deliverables** — d.
-**Steps** — s.
-`)
-
-	findings, err := Change(dir, StagePlan)
-	if err != nil {
-		t.Fatalf("Change: %v", err)
-	}
-	if len(findings) == 0 {
-		t.Fatal("want at least one finding for Milestone 2's missing Validation contract label")
-	}
-	for _, f := range findings {
-		if !strings.Contains(f.Message, "Milestone 2") {
-			t.Errorf("finding %+v: want it to name Milestone 2 (Milestone 1 is well-formed and shouldn't be flagged)", f)
-		}
+		t.Errorf("findings = %v, want missing_artifact (no plan.yaml)", kinds)
 	}
 }
 

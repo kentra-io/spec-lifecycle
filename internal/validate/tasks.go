@@ -1,9 +1,6 @@
 package validate
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,61 +21,13 @@ var milestoneLabels = []string{"**Goal**", "**Deliverables**", "**Validation con
 const validationContractLabel = "**Validation contract**"
 const stepsLabel = "**Steps**"
 
-// validatePlan checks tasks.md's custom-artifact structure: every
-// milestone block carries all four fixed labels, and its Validation
-// contract has at least one checkable line under it
-// (spec-lifecycle.md §4.2, verbatim). It does not grade whether the
-// contract's content is actually checkable, or whether Steps are properly
-// sized — those are human/agent review concerns, not machine-checkable
-// ones.
-func validatePlan(dir string) ([]Finding, error) {
-	path := filepath.Join(dir, tasksFile)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []Finding{{
-				File: path, Kind: "missing_artifact",
-				Message:  tasksFile + " not found",
-				Severity: SeverityError,
-			}}, nil
-		}
-		return nil, fmt.Errorf("validate: reading %s: %w", path, err)
-	}
-
-	blocks, hasHeadings := splitMilestoneBlocks(data)
-	if !hasHeadings {
-		return []Finding{{
-			File: path, Line: 1, Kind: "no_milestone_headings",
-			Message:  `tasks.md has no "## Milestone <n>: <name>" headings (spec-lifecycle.md §4.2)`,
-			Severity: SeverityError,
-		}}, nil
-	}
-
-	var findings []Finding
-	for _, b := range blocks {
-		body := strings.Join(b.bodyLines, "\n")
-		for _, label := range milestoneLabels {
-			if !strings.Contains(body, label) {
-				findings = append(findings, Finding{
-					File: path, Line: b.headingLine, Kind: "missing_milestone_label",
-					Message:  fmt.Sprintf("%s is missing the %s label (spec-lifecycle.md §4.2)", b.name, label),
-					Severity: SeverityError,
-				})
-			}
-		}
-		if section, ok := labelSection(b.bodyLines, validationContractLabel); ok {
-			if !hasNonBlankLine(section) {
-				findings = append(findings, Finding{
-					File: path, Line: b.headingLine, Kind: "empty_validation_contract",
-					Message:  fmt.Sprintf("%s's Validation contract has no checkable lines under it (spec-lifecycle.md §4.2)", b.name),
-					Severity: SeverityError,
-				})
-			}
-			findings = append(findings, validateContractBlock(path, b.name, b.headingLine, section)...)
-		}
-	}
-	return findings, nil
-}
+// NOTE (change 007, Milestone 5): the plan-stage gate no longer parses
+// tasks.md — `validatePlan` now delegates to `milestoned-plan-dag validate`
+// over the change's plan.yaml (see plan_gate.go, design D6). The tasks.md
+// milestone-parsing helpers below (splitMilestoneBlocks / labelSection /
+// milestoneLabels, and ParseMilestones in plan.go) remain only for the
+// `lifecycle apply --format json` surface until Milestone 6 retires them
+// together with this file.
 
 // milestoneBlock is one "## Milestone <n>: <name>" section of tasks.md,
 // split out for both validatePlan's structural checks (above) and

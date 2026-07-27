@@ -3,6 +3,7 @@ package archive
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -249,40 +250,29 @@ func TestArchiveBugDeltaless(t *testing.T) {
 	}
 }
 
-// --- tasks-completion gate ---
+// --- step-completion gate (milestoned-plan-dag resolve, change 007 M5) ---
 
-const tasksWithUncheckedStep = `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. [x] write the handler
-  2. [ ] write the tests
-`
+// resolveMilestone renders one `milestoned-plan-dag resolve` milestone
+// entry in the YAML shape internal/plandag.Resolve reads.
+func resolveMilestone(id int, title string, done bool) string {
+	return fmt.Sprintf("  - id: %d\n    title: %q\n    done: %t\n", id, title, done)
+}
 
-const tasksAllChecked = `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. [x] write the handler
-  2. [x] write the tests
-`
-
-func TestArchiveRefusesOnIncompleteTasks(t *testing.T) {
+func TestArchiveRefusesOnOutstandingMilestone(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+
+		resolveMilestone(1, "Password login", true)+
+		resolveMilestone(2, "Session handling", false))
 
 	_, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if !errors.Is(err, ErrTasksIncomplete) {
 		t.Fatalf("err = %v, want ErrTasksIncomplete", err)
 	}
-	if !contains(err.Error(), "write the tests") {
-		t.Errorf("error message %q should name the unchecked step", err.Error())
+	if !contains(err.Error(), "Session handling") {
+		t.Errorf("error message %q should name the outstanding milestone", err.Error())
 	}
 
 	// Nothing should have moved or been written.
@@ -297,8 +287,9 @@ func TestArchiveRefusesOnIncompleteTasks(t *testing.T) {
 func TestArchiveForceIncompleteTasksOverride(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+resolveMilestone(1, "Password login", false))
 
 	res, err := Archive(Request{Root: root, Change: "001-add-login", ForceIncompleteTasks: true})
 	if err != nil {
@@ -312,11 +303,14 @@ func TestArchiveForceIncompleteTasksOverride(t *testing.T) {
 	}
 }
 
-func TestArchiveAllowsAllStepsChecked(t *testing.T) {
+func TestArchiveAllowsAllMilestonesDone(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksAllChecked)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+
+		resolveMilestone(1, "Password login", true)+
+		resolveMilestone(2, "Session handling", true))
 
 	res, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if err != nil {
@@ -327,37 +321,16 @@ func TestArchiveAllowsAllStepsChecked(t *testing.T) {
 	}
 }
 
-func TestArchiveAllowsNoTasksFile(t *testing.T) {
-	// No tasks.md at all — the gate must stay a no-op (backward
-	// compatible with every change that predates checkbox tracking).
+func TestArchiveAllowsNoPlanFile(t *testing.T) {
+	// No plan.yaml at all — the gate must stay a no-op (backward
+	// compatible with every change that predates the plan-dag integration).
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	_, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if err != nil {
-		t.Fatalf("Archive: %v (tasks-completion gate must not block a change with no tasks.md)", err)
-	}
-}
-
-func TestArchiveAllowsUntrackedSteps(t *testing.T) {
-	// Legacy-style Steps (no checkboxes at all) must not be gated either.
-	root := newProjectRoot(t)
-	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. write the handler
-  2. write the tests
-`)
-	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
-
-	_, err := Archive(Request{Root: root, Change: "001-add-login"})
-	if err != nil {
-		t.Fatalf("Archive: %v (untracked Steps must not be gated)", err)
+		t.Fatalf("Archive: %v (step-completion gate must not block a change with no plan.yaml)", err)
 	}
 }
 
