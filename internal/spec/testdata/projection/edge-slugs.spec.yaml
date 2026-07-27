@@ -1,0 +1,29 @@
+capability: edge-slugs
+purpose: |
+  Exercise the D5 slug derivation and byte-stability rules over requirement and
+  scenario names with punctuation runs, digits, casing, and separators.
+requirements:
+  - name: "  --Leading & Trailing punctuation!!  "
+    text: |
+      The projection MUST derive a clean kebab-slug even when the name carries
+      leading, trailing, and interior punctuation runs.
+    scenarios:
+      - name: "Mixed CASE and   multiple   spaces"
+        given:
+          - "a name with mixed casing and repeated spaces"
+        when:
+          - "the slug is derived"
+        then:
+          - "the slug is lowercased with single-dash separators"
+  - name: "Digits 123 and codes v2.0"
+    text: |
+      The slug MUST preserve digit runs while collapsing surrounding
+      punctuation, per D5. This requirement MUST hold.
+    scenarios:
+      - name: "already-kebab-case"
+        given:
+          - "a name that is already kebab-case"
+        when:
+          - "the slug is derived"
+        then:
+          - "the slug is unchanged"
