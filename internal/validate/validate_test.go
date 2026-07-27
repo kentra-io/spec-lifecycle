@@ -404,7 +404,7 @@ func TestArtifactsForStage(t *testing.T) {
 	cases := map[Stage]string{
 		StageRefine: proposalFile,
 		StageDesign: designFile,
-		StagePlan:   tasksFile,
+		StagePlan:   planFile,
 	}
 	for stage, want := range cases {
 		got := ArtifactsForStage(stage)

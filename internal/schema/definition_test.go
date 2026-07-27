@@ -10,8 +10,8 @@ func TestLoad(t *testing.T) {
 	if def.Name != Name {
 		t.Errorf("def.Name = %q, want %q", def.Name, Name)
 	}
-	if len(def.Artifacts) != 4 {
-		t.Fatalf("len(def.Artifacts) = %d, want 4", len(def.Artifacts))
+	if len(def.Artifacts) != 3 {
+		t.Fatalf("len(def.Artifacts) = %d, want 3", len(def.Artifacts))
 	}
 }
 
@@ -27,7 +27,7 @@ func TestGenerates(t *testing.T) {
 		{"proposal", "proposal.md"},
 		{"specs", "specs/**/spec.md"},
 		{"design", "design.md"},
-		{"tasks", "tasks.md"},
+		{"tasks", ""}, // retired (change 007 M6): no tasks artifact
 		{"nonexistent", ""},
 	}
 	for _, tt := range tests {

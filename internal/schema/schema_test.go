@@ -23,7 +23,6 @@ func TestInstallWritesExpectedTree(t *testing.T) {
 		"templates/proposal.md",
 		"templates/spec.md",
 		"templates/design.md",
-		"templates/tasks.md",
 		"living-spec.schema.json",
 		"spec-delta.schema.json",
 	}
@@ -121,8 +120,8 @@ func TestVerifyReportsMissingDescriptorEntirely(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if len(mismatches) != 7 { // schema.yaml + 4 templates + 2 published JSON Schemas
-		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 7", len(mismatches))
+	if len(mismatches) != 6 { // schema.yaml + 3 templates + 2 published JSON Schemas
+		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 6", len(mismatches))
 	}
 	for _, m := range mismatches {
 		if m.Reason != "missing" {
@@ -238,7 +237,9 @@ func TestSchemaYAMLIsWellFormed(t *testing.T) {
 			Template  string   `yaml:"template"`
 			Requires  []string `yaml:"requires"`
 		} `yaml:"artifacts"`
-		Apply struct {
+		// change 007 M6 retired the top-level apply: block; it must be
+		// absent now (the machine plan surface is milestoned-plan-dag).
+		Apply *struct {
 			Requires []string `yaml:"requires"`
 			Tracks   string   `yaml:"tracks"`
 		} `yaml:"apply"`
@@ -249,16 +250,16 @@ func TestSchemaYAMLIsWellFormed(t *testing.T) {
 	if doc.Name != Name {
 		t.Errorf("schema.yaml name = %q, want %q", doc.Name, Name)
 	}
-	if len(doc.Artifacts) != 4 {
-		t.Fatalf("schema.yaml has %d artifacts, want 4 (proposal, specs, design, tasks)", len(doc.Artifacts))
+	if len(doc.Artifacts) != 3 {
+		t.Fatalf("schema.yaml has %d artifacts, want 3 (proposal, specs, design)", len(doc.Artifacts))
 	}
-	wantIDs := []string{"proposal", "specs", "design", "tasks"}
+	wantIDs := []string{"proposal", "specs", "design"}
 	for i, id := range wantIDs {
 		if doc.Artifacts[i].ID != id {
 			t.Errorf("artifact[%d].id = %q, want %q", i, doc.Artifacts[i].ID, id)
 		}
 	}
-	if doc.Apply.Tracks != "tasks.md" {
-		t.Errorf("apply.tracks = %q, want %q", doc.Apply.Tracks, "tasks.md")
+	if doc.Apply != nil {
+		t.Errorf("schema.yaml still declares an apply: block (%+v); change 007 M6 retired it", *doc.Apply)
 	}
 }

@@ -48,7 +48,7 @@ func ArtifactsForStage(stage Stage) []string {
 	case StageDesign:
 		return []string{designFile}
 	case StagePlan:
-		return []string{tasksFile}
+		return []string{planFile}
 	default:
 		return nil
 	}
