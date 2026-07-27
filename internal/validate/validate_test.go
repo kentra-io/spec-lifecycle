@@ -53,6 +53,24 @@ The system SHALL allow a registered user to authenticate with a username and pas
 - **THEN** the system SHALL grant a session
 `
 
+// validYAMLDelta is the change-007 authoritative delta form: structured YAML
+// (spec.yaml), read by the refine stage in place of any markdown file.
+const validYAMLDelta = `capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login
+      text: The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: Successful login
+          given:
+            - a registered user
+          when:
+            - they submit correct credentials
+          then:
+            - the system grants a session
+`
+
 const validDesign = `# Add password login — Design
 
 ## Context
@@ -92,7 +110,12 @@ const validTasks = `## Milestone 1: Password login
 func TestChangeRefineHappyPath(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.yaml"), validYAMLDelta)
+	// A stray markdown file must NOT be read as authoritative: change 007
+	// reads the YAML delta, not any markdown file (spec-format scenario "a
+	// spec delta is authored and read as YAML"). Garbage markdown here must
+	// be ignored.
+	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.md"), "not a real delta at all\n")
 
 	findings, err := Change(dir, StageRefine)
 	if err != nil {
@@ -212,7 +235,7 @@ func TestProposalIssueFieldAbsentEntirely(t *testing.T) {
 	}
 }
 
-// --- specs/**/spec.md delegation ---
+// --- specs/**/spec.yaml delegation (change 007) ---
 
 func TestSpecsDeltaMissingDirectory(t *testing.T) {
 	dir := t.TempDir()
@@ -231,17 +254,18 @@ func TestSpecsDeltaMissingDirectory(t *testing.T) {
 func TestSpecsDeltaMalformedGrammarDelegatesToInternalSpec(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "proposal.md"), validProposal)
-	// Missing SHALL/MUST keyword — an internal/spec.ParseDelta error
+	// Missing SHALL/MUST keyword — an internal/spec.ParseDeltaYAML error
 	// (KindMissingRFC2119), not something this package re-implements.
-	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.md"), `## ADDED Requirements
-
-### Requirement: Password login
-The system lets a user log in.
-
-#### Scenario: ok
-- **GIVEN** a
-- **WHEN** b
-- **THEN** c
+	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.yaml"), `capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login
+      text: The system lets a user log in.
+      scenarios:
+        - name: ok
+          then:
+            - c
 `)
 
 	findings, err := Change(dir, StageRefine)
@@ -259,40 +283,68 @@ The system lets a user log in.
 	}
 }
 
-func TestSpecsDeltaUnrecognizedSectionWarning(t *testing.T) {
+// TestSpecsDeltaMalformedYAMLNamedByPath asserts the change-007 refine-read
+// contract: a spec.yaml that is not valid YAML fails with an error naming the
+// offending file path.
+func TestSpecsDeltaMalformedYAMLNamedByPath(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.md"), `## ADDED Requirements
+	yamlPath := filepath.Join(dir, "specs", "auth", "spec.yaml")
+	writeFile(t, yamlPath, "capability: auth\ndeltas: [unterminated\n")
 
-### Requirement: Password login
-The system SHALL allow a user to log in.
+	findings, err := Change(dir, StageRefine)
+	if err != nil {
+		t.Fatalf("Change: %v", err)
+	}
+	var bad *Finding
+	for i := range findings {
+		if findings[i].Kind == "malformed_yaml" {
+			bad = &findings[i]
+		}
+	}
+	if bad == nil {
+		t.Fatalf("findings = %+v, want a malformed_yaml finding", findings)
+	}
+	if bad.File != yamlPath {
+		t.Errorf("malformed_yaml finding File = %q, want the offending path %q", bad.File, yamlPath)
+	}
+	if !strings.Contains(bad.Message, yamlPath) {
+		t.Errorf("malformed_yaml message = %q, want it to name the offending path %q", bad.Message, yamlPath)
+	}
+	if bad.Severity != SeverityError {
+		t.Errorf("malformed_yaml severity = %q, want error", bad.Severity)
+	}
+}
 
-#### Scenario: ok
-- **GIVEN** a
-- **WHEN** b
-- **THEN** c
-
-## Notes
-
-### Requirement: Orphaned under Notes
-This one is silently dropped by the fold.
+// TestSpecsDeltaSchemaViolationNamedByPath asserts a spec.yaml that decodes but
+// violates the published spec-delta schema fails naming the offending path.
+func TestSpecsDeltaSchemaViolationNamedByPath(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "proposal.md"), validProposal)
+	yamlPath := filepath.Join(dir, "specs", "auth", "spec.yaml")
+	// op is not one of the four enum values — a schema violation.
+	writeFile(t, yamlPath, `capability: auth
+deltas:
+  - op: BOGUS
+    requirement:
+      name: X
 `)
 
 	findings, err := Change(dir, StageRefine)
 	if err != nil {
 		t.Fatalf("Change: %v", err)
 	}
-	var warn *Finding
+	var bad *Finding
 	for i := range findings {
-		if findings[i].Kind == "requirement_under_unrecognized_section" {
-			warn = &findings[i]
+		if findings[i].Kind == "delta_schema_error" {
+			bad = &findings[i]
 		}
 	}
-	if warn == nil {
-		t.Fatalf("findings = %+v, want a requirement_under_unrecognized_section warning", findings)
+	if bad == nil {
+		t.Fatalf("findings = %+v, want a delta_schema_error finding", findings)
 	}
-	if warn.Severity != SeverityWarning {
-		t.Errorf("requirement_under_unrecognized_section severity = %q, want warning", warn.Severity)
+	if !strings.Contains(bad.Message, yamlPath) {
+		t.Errorf("delta_schema_error message = %q, want it to name the offending path %q", bad.Message, yamlPath)
 	}
 }
 

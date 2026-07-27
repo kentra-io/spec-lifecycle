@@ -1,2 +1,3 @@
 provisioning:
   claude_dir_source: /Users/jony/code/kentra/harness/spec-lifecycle/.worktrees/007-yaml-source-of-truth/.agent-claude
+  env_auth: true
