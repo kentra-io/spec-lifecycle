@@ -20,7 +20,7 @@ import (
 // collision found (nil if none) plus any non-fatal warnings (a sibling
 // change whose delta could not be read/parsed — skipped, not fatal to
 // THIS archive).
-func checkConflicts(root, change string, ownDeltas map[string]*spec.Delta) ([]Conflict, []string, error) {
+func checkConflicts(root, change string, ownDeltas map[string]*spec.SpecDelta) ([]Conflict, []string, error) {
 	ownTargets := make(map[string]map[string]string, len(ownDeltas))
 	for cap, d := range ownDeltas {
 		ownTargets[cap] = targetedNames(d)
@@ -65,12 +65,12 @@ func checkConflicts(root, change string, ownDeltas map[string]*spec.Delta) ([]Co
 				continue // this change doesn't touch that capability at all
 			}
 
-			data, rerr := os.ReadFile(filepath.Join(otherDir, "specs", cap, "spec.md"))
+			data, rerr := os.ReadFile(filepath.Join(otherDir, "specs", cap, "spec.yaml"))
 			if rerr != nil {
 				warnings = append(warnings, fmt.Sprintf("conflict-check: skipping %s/%s: %v", name, cap, rerr))
 				continue
 			}
-			otherDelta, perr := spec.ParseDelta(data)
+			otherDelta, perr := spec.ParseDeltaYAML(data)
 			if perr != nil {
 				warnings = append(warnings, fmt.Sprintf("conflict-check: skipping %s/%s (unparsable delta): %v", name, cap, perr))
 				continue
@@ -102,16 +102,17 @@ func checkConflicts(root, change string, ownDeltas map[string]*spec.Delta) ([]Co
 // original-cased display name) — the set of ALREADY-EXISTING requirements
 // this delta touches (as opposed to ADDED, which names something new;
 // doc.go explains why ADDED is excluded here).
-func targetedNames(d *spec.Delta) map[string]string {
+func targetedNames(d *spec.SpecDelta) map[string]string {
 	out := map[string]string{}
-	for _, r := range d.Modified {
-		out[strings.ToLower(r.Name)] = r.Name
-	}
-	for _, n := range d.Removed {
-		out[strings.ToLower(n)] = n
-	}
-	for _, rn := range d.Renamed {
-		out[strings.ToLower(rn.From)] = rn.From
+	for _, e := range d.Deltas {
+		switch e.Op {
+		case spec.OpModified:
+			out[strings.ToLower(e.Requirement.Name)] = e.Requirement.Name
+		case spec.OpRemoved:
+			out[strings.ToLower(e.Requirement.Name)] = e.Requirement.Name
+		case spec.OpRenamed:
+			out[strings.ToLower(e.From)] = e.From
+		}
 	}
 	return out
 }

@@ -42,17 +42,17 @@ stdout 'archive ledger'
 
 exists .claude/skills/lifecycle-refine/SKILL.md
 exists .claude/skills/lifecycle-design/SKILL.md
-exists .claude/skills/lifecycle-plan/SKILL.md
+exists .claude/skills/lifecycle-init/SKILL.md
 exists .claude/skills/lifecycle-bug/SKILL.md
 exists .claude/skills/lifecycle-archive/SKILL.md
 exists .agents/skills/lifecycle-refine/SKILL.md
 exists .agents/skills/lifecycle-design/SKILL.md
-exists .agents/skills/lifecycle-plan/SKILL.md
+exists .agents/skills/lifecycle-init/SKILL.md
 exists .agents/skills/lifecycle-bug/SKILL.md
 exists .agents/skills/lifecycle-archive/SKILL.md
 exists .cursor/skills/lifecycle-refine/SKILL.md
 exists .cursor/skills/lifecycle-design/SKILL.md
-exists .cursor/skills/lifecycle-plan/SKILL.md
+exists .cursor/skills/lifecycle-init/SKILL.md
 exists .cursor/skills/lifecycle-bug/SKILL.md
 exists .cursor/skills/lifecycle-archive/SKILL.md
 
@@ -62,7 +62,7 @@ exists .cursor/skills/lifecycle-archive/SKILL.md
 # and confirm `lifecycle validate` is clean against it.
 mkdir openspec/changes/001-add-password-login/specs/auth
 cp fixtures/proposal.md openspec/changes/001-add-password-login/proposal.md
-cp fixtures/spec.md openspec/changes/001-add-password-login/specs/auth/spec.md
+cp fixtures/spec.yaml openspec/changes/001-add-password-login/specs/auth/spec.yaml
 
 exec lifecycle validate --stage refine
 stdout '001-add-password-login: ok'
@@ -94,13 +94,19 @@ Users need to authenticate.
 ## Impact
 - New capability: auth.
 
--- fixtures/spec.md --
-## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login
-- **GIVEN** a registered user
-- **WHEN** they submit correct credentials
-- **THEN** the system SHALL grant a session
+-- fixtures/spec.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: 'Password login'
+      text: |
+        The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: 'Successful login'
+          given:
+            - 'a registered user'
+          when:
+            - 'they submit correct credentials'
+          then:
+            - 'the system SHALL grant a session'

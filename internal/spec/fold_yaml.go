@@ -230,6 +230,22 @@ func FoldYAML(capability string, base *LivingSpec, d *SpecDelta) (*LivingSpec, e
 	}, nil
 }
 
+// RenderSource serializes the living spec back to its owned YAML source form
+// (openspec/specs/<capability>/spec.yaml) — the inverse of ParseLivingSpecYAML.
+// internal/archive persists the folded LivingSpec through this so a subsequent
+// archive of the same capability can read it back as the fold base (markdown
+// spec.md is a one-way projection and can never be re-parsed into the model —
+// design D3). The bytes are not held to a byte-stability contract (only the
+// markdown projection is, design D5): they need only round-trip cleanly through
+// ParseLivingSpecYAML, which yaml.Marshal/Unmarshal guarantees.
+func (ls *LivingSpec) RenderSource() ([]byte, error) {
+	data, err := yaml.Marshal(ls)
+	if err != nil {
+		return nil, fmt.Errorf("spec: rendering living-spec YAML source: %w", err)
+	}
+	return data, nil
+}
+
 // yamlFoldSet is the insertion-ordered map of requirement name (lower-cased) ->
 // SpecRequirement used by FoldYAML — the structured-model counterpart to
 // foldSet, with the same JS-Map semantics (delete-then-insert moves an entry

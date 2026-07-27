@@ -43,15 +43,21 @@ func newFeatureChange(t *testing.T) (root, changeDir string) {
 	root = t.TempDir()
 	changeDir = filepath.Join(root, "openspec", "changes", "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), `## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate.
-
-#### Scenario: Successful login
-- **GIVEN** a registered user
-- **WHEN** they submit correct credentials
-- **THEN** the system SHALL grant a session
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), `capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: 'Password login'
+      text: |
+        The system SHALL allow a registered user to authenticate.
+      scenarios:
+        - name: 'Successful login'
+          given:
+            - 'a registered user'
+          when:
+            - 'they submit correct credentials'
+          then:
+            - 'the system SHALL grant a session'
 `)
 	return root, changeDir
 }

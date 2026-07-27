@@ -19,8 +19,14 @@ type foldedCapability struct {
 	capability string
 	preImage   string
 	postImage  string
-	rendered   []byte
-	deltaOps   []DeltaOp
+	// rendered is the deterministic markdown PROJECTION written to the live
+	// openspec/specs/<cap>/spec.md; postImage is its hash (the value guard's
+	// digest chain and from-empty replay compare against). source is the
+	// owned YAML the fold produced, written to spec.yaml so a subsequent
+	// archive of this capability can read it back as its fold base.
+	rendered []byte
+	source   []byte
+	deltaOps []DeltaOp
 }
 
 // Archive runs the 5-step archive pipeline (doc.go) for req.Change:
@@ -81,19 +87,19 @@ func Archive(req Request) (Result, error) {
 	hasDelta := validate.HasSpecsDeltas(changeDir)
 
 	var capabilities []string
-	ownDeltas := map[string]*spec.Delta{}
+	ownDeltas := map[string]*spec.SpecDelta{}
 	if hasDelta {
 		capabilities, err = discoverCapabilities(changeDir)
 		if err != nil {
 			return Result{}, fmt.Errorf("%w: discovering capabilities: %w", ErrCouldNotRun, err)
 		}
 		for _, cap := range capabilities {
-			deltaPath := filepath.Join(changeDir, "specs", cap, "spec.md")
+			deltaPath := filepath.Join(changeDir, "specs", cap, "spec.yaml")
 			data, rerr := os.ReadFile(deltaPath)
 			if rerr != nil {
 				return Result{}, fmt.Errorf("%w: reading delta %s: %w", ErrCouldNotRun, deltaPath, rerr)
 			}
-			d, perr := spec.ParseDelta(data)
+			d, perr := spec.ParseDeltaYAML(data)
 			if perr != nil {
 				return Result{}, fmt.Errorf("%w: parsing delta %s: %w", ErrFoldFailed, deltaPath, perr)
 			}
@@ -120,31 +126,47 @@ func Archive(req Request) (Result, error) {
 	// yet, so any failure here leaves the project untouched) ---
 	var folded []foldedCapability
 	for _, cap := range capabilities {
-		specPath := filepath.Join(req.Root, "openspec", "specs", cap, "spec.md")
+		// The pre-image is the hash of the live markdown PROJECTION
+		// (spec.md), the same basis guard's digest chain compares a prior
+		// record's postImageSha against; the fold BASE, by contrast, is read
+		// from the owned YAML source (spec.yaml), since the projection is
+		// one-way and can never be re-parsed into the model (design D3).
+		projPath := filepath.Join(req.Root, "openspec", "specs", cap, "spec.md")
+		sourcePath := filepath.Join(req.Root, "openspec", "specs", cap, "spec.yaml")
 
-		var base *spec.RequirementSet
 		preImage := emptyImageSHA
-		if data, rerr := os.ReadFile(specPath); rerr == nil {
+		if data, rerr := os.ReadFile(projPath); rerr == nil {
 			preImage = hashBytes(data)
-			base, err = spec.ParseRequirementSet(data)
-			if err != nil {
-				return Result{}, fmt.Errorf("%w: parsing live spec %s: %w", ErrCouldNotRun, specPath, err)
-			}
 		} else if !os.IsNotExist(rerr) {
-			return Result{}, fmt.Errorf("%w: reading live spec %s: %w", ErrCouldNotRun, specPath, rerr)
+			return Result{}, fmt.Errorf("%w: reading live spec %s: %w", ErrCouldNotRun, projPath, rerr)
 		}
 
-		foldedSet, ferr := spec.Fold(cap, req.Change, base, ownDeltas[cap])
+		var base *spec.LivingSpec
+		if data, rerr := os.ReadFile(sourcePath); rerr == nil {
+			base, err = spec.ParseLivingSpecYAML(data)
+			if err != nil {
+				return Result{}, fmt.Errorf("%w: parsing live spec source %s: %w", ErrCouldNotRun, sourcePath, err)
+			}
+		} else if !os.IsNotExist(rerr) {
+			return Result{}, fmt.Errorf("%w: reading live spec source %s: %w", ErrCouldNotRun, sourcePath, rerr)
+		}
+
+		foldedSet, ferr := spec.FoldYAML(cap, base, ownDeltas[cap])
 		if ferr != nil {
 			return Result{}, fmt.Errorf("%w: folding capability %q: %w", ErrFoldFailed, cap, ferr)
 		}
-		rendered := foldedSet.Render()
+		rendered := foldedSet.RenderProjection()
+		source, serr := foldedSet.RenderSource()
+		if serr != nil {
+			return Result{}, fmt.Errorf("%w: rendering folded source for capability %q: %w", ErrCouldNotRun, cap, serr)
+		}
 
 		folded = append(folded, foldedCapability{
 			capability: cap,
 			preImage:   preImage,
 			postImage:  hashBytes(rendered),
 			rendered:   rendered,
+			source:     source,
 			deltaOps:   deltaOpsFromDelta(ownDeltas[cap]),
 		})
 	}
@@ -164,15 +186,28 @@ func Archive(req Request) (Result, error) {
 		}
 	}()
 	for _, fc := range folded {
-		specPath := filepath.Join(req.Root, "openspec", "specs", fc.capability, "spec.md")
-		if err := os.MkdirAll(filepath.Dir(specPath), 0o755); err != nil {
-			return Result{}, fmt.Errorf("%w: creating %s: %w", ErrCouldNotRun, filepath.Dir(specPath), err)
+		capDir := filepath.Join(req.Root, "openspec", "specs", fc.capability)
+		if err := os.MkdirAll(capDir, 0o755); err != nil {
+			return Result{}, fmt.Errorf("%w: creating %s: %w", ErrCouldNotRun, capDir, err)
 		}
-		w, err := atomicwrite.Prepare(specPath, fc.rendered, 0o644)
+		// Write the owned YAML source (spec.yaml) AND its deterministic
+		// markdown projection (spec.md) as part of the same all-or-nothing
+		// group: the source is the fold base for any later archive; the
+		// projection is what guard reads for its digest chain and from-empty
+		// replay (design D3/D9).
+		sourcePath := filepath.Join(capDir, "spec.yaml")
+		ws, err := atomicwrite.Prepare(sourcePath, fc.source, 0o644)
 		if err != nil {
-			return Result{}, fmt.Errorf("%w: preparing write for %s: %w", ErrCouldNotRun, specPath, err)
+			return Result{}, fmt.Errorf("%w: preparing write for %s: %w", ErrCouldNotRun, sourcePath, err)
 		}
-		prepared = append(prepared, w)
+		prepared = append(prepared, ws)
+
+		projPath := filepath.Join(capDir, "spec.md")
+		wp, err := atomicwrite.Prepare(projPath, fc.rendered, 0o644)
+		if err != nil {
+			return Result{}, fmt.Errorf("%w: preparing write for %s: %w", ErrCouldNotRun, projPath, err)
+		}
+		prepared = append(prepared, wp)
 	}
 	for _, w := range prepared {
 		if err := w.Commit(); err != nil {
@@ -250,21 +285,29 @@ func Archive(req Request) (Result, error) {
 
 // deltaOpsFromDelta renders d's ops in the fold's own fixed order
 // (RENAMED -> REMOVED -> MODIFIED -> ADDED, spec-lifecycle.md §6.1) — see
-// doc.go for the RENAMED "<from> -> <to>" convention.
-func deltaOpsFromDelta(d *spec.Delta) []DeltaOp {
-	ops := make([]DeltaOp, 0, len(d.Renamed)+len(d.Removed)+len(d.Modified)+len(d.Added))
-	for _, rn := range d.Renamed {
-		ops = append(ops, DeltaOp{Op: string(spec.OpRenamed), Requirement: rn.From + " -> " + rn.To})
+// doc.go for the RENAMED "<from> -> <to>" convention. The source is the
+// structured YAML delta (spec.SpecDelta); its entries are grouped by op
+// into the fixed order here regardless of their author order, matching the
+// order FoldYAML applies them and the markdown engine's original output.
+func deltaOpsFromDelta(d *spec.SpecDelta) []DeltaOp {
+	var renamed, removed, modified, added []DeltaOp
+	for _, e := range d.Deltas {
+		switch e.Op {
+		case spec.OpRenamed:
+			renamed = append(renamed, DeltaOp{Op: string(spec.OpRenamed), Requirement: e.From + " -> " + e.To})
+		case spec.OpRemoved:
+			removed = append(removed, DeltaOp{Op: string(spec.OpRemoved), Requirement: e.Requirement.Name})
+		case spec.OpModified:
+			modified = append(modified, DeltaOp{Op: string(spec.OpModified), Requirement: e.Requirement.Name})
+		case spec.OpAdded:
+			added = append(added, DeltaOp{Op: string(spec.OpAdded), Requirement: e.Requirement.Name})
+		}
 	}
-	for _, name := range d.Removed {
-		ops = append(ops, DeltaOp{Op: string(spec.OpRemoved), Requirement: name})
-	}
-	for _, r := range d.Modified {
-		ops = append(ops, DeltaOp{Op: string(spec.OpModified), Requirement: r.Name})
-	}
-	for _, r := range d.Added {
-		ops = append(ops, DeltaOp{Op: string(spec.OpAdded), Requirement: r.Name})
-	}
+	ops := make([]DeltaOp, 0, len(renamed)+len(removed)+len(modified)+len(added))
+	ops = append(ops, renamed...)
+	ops = append(ops, removed...)
+	ops = append(ops, modified...)
+	ops = append(ops, added...)
 	return ops
 }
 

@@ -8,12 +8,14 @@ disable-model-invocation: true
 
 Conduct the design stage of ONE change, in a fresh session, and stop at
 gate 2. Your entire input is the gate-1-approved `proposal.md` and
-`specs/**/spec.md` in this change folder — re-read them from disk rather
+`specs/**/spec.yaml` in this change folder — re-read them from disk rather
 than trusting a memory of an earlier conversation (spec-lifecycle.md §3.1,
 "the artifact is the interface"). Skip this whole stage only if refine
 proposed, and gate 1 approved, a design-skip (`designSkipped: true` on the
 refine gate entry — check with `lifecycle status --change <change>`); go
-straight to `/lifecycle-plan` in that case. The plan-gate still runs at
+straight to the plan stage in that case (author `plan.yaml` with
+`milestoned-plan-dag`'s `/plan-author` skill, gated by
+`lifecycle validate --stage plan`). The plan-gate still runs at
 gate 3 regardless of a design-skip.
 
 ## What this stage produces

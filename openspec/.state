@@ -1,41 +1,47 @@
 schemaVersion: 1
 managed:
     - path: .agents/skills/lifecycle-archive/SKILL.md
-      hash: 11381bb60612ebad988ae7ee99de3ce571ec096712cb7c1fca7812dad29c2c44
+      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
     - path: .agents/skills/lifecycle-bug/SKILL.md
-      hash: 1df866ecab2d178408f1cc28ddf8b5ad93ddab772fcda479a5494a3ba7ef43be
+      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
     - path: .agents/skills/lifecycle-design/SKILL.md
-      hash: 9ab25fcaada3f47975376e21d897d2ef25f3cc2e89563fc63cd466591e4eb90c
+      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+    - path: .agents/skills/lifecycle-init/SKILL.md
+      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
     - path: .agents/skills/lifecycle-new-feature/SKILL.md
-      hash: 9ba4860d5eb01ed01bceb6b79c4727ff6ed72b9d8081f428e16a049130db281e
+      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
     - path: .agents/skills/lifecycle-plan/SKILL.md
       hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
     - path: .agents/skills/lifecycle-refine/SKILL.md
-      hash: 8c1843d2bbf94d1246b5f196d83033750d9dab4eb2c3362a5ea2090f41ec7352
+      hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: .claude/skills/lifecycle-archive/SKILL.md
-      hash: 11381bb60612ebad988ae7ee99de3ce571ec096712cb7c1fca7812dad29c2c44
+      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
     - path: .claude/skills/lifecycle-bug/SKILL.md
-      hash: 1df866ecab2d178408f1cc28ddf8b5ad93ddab772fcda479a5494a3ba7ef43be
+      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
     - path: .claude/skills/lifecycle-design/SKILL.md
-      hash: 9ab25fcaada3f47975376e21d897d2ef25f3cc2e89563fc63cd466591e4eb90c
+      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+    - path: .claude/skills/lifecycle-init/SKILL.md
+      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
     - path: .claude/skills/lifecycle-new-feature/SKILL.md
-      hash: 9ba4860d5eb01ed01bceb6b79c4727ff6ed72b9d8081f428e16a049130db281e
+      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
     - path: .claude/skills/lifecycle-plan/SKILL.md
       hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
     - path: .claude/skills/lifecycle-refine/SKILL.md
-      hash: 8c1843d2bbf94d1246b5f196d83033750d9dab4eb2c3362a5ea2090f41ec7352
+      hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: .cursor/skills/lifecycle-archive/SKILL.md
-      hash: 11381bb60612ebad988ae7ee99de3ce571ec096712cb7c1fca7812dad29c2c44
+      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
     - path: .cursor/skills/lifecycle-bug/SKILL.md
-      hash: 1df866ecab2d178408f1cc28ddf8b5ad93ddab772fcda479a5494a3ba7ef43be
+      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
     - path: .cursor/skills/lifecycle-design/SKILL.md
-      hash: 9ab25fcaada3f47975376e21d897d2ef25f3cc2e89563fc63cd466591e4eb90c
+      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+    - path: .cursor/skills/lifecycle-init/SKILL.md
+      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
     - path: .cursor/skills/lifecycle-new-feature/SKILL.md
-      hash: 9ba4860d5eb01ed01bceb6b79c4727ff6ed72b9d8081f428e16a049130db281e
+      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
     - path: .cursor/skills/lifecycle-plan/SKILL.md
       hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
     - path: .cursor/skills/lifecycle-refine/SKILL.md
-      hash: 8c1843d2bbf94d1246b5f196d83033750d9dab4eb2c3362a5ea2090f41ec7352
+      hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: AGENTS.md
       hash: ad43a642a1f1578ce4d547242e7b7449d7949c2fc0427f09df1c1b40968ca521
     - path: CLAUDE.md

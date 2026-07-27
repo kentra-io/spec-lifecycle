@@ -1,20 +1,26 @@
-# --change selects a single change folder even when others would fail;
-# a warning-severity finding (an unrecognized-section "### Requirement:")
-# is reported but does not fail the exit code (0), unlike an error.
+# --change selects a single change folder even when others would fail.
+#
+# The refine-stage delta is now the owned YAML source (spec.yaml), validated
+# against the published spec-delta JSON Schema — so a delta that violates the
+# schema is reported as an error naming the offending JSON path. The old
+# markdown-only "unrecognized section heading" warning has no structured-YAML
+# analog (the model has no section headings a requirement can be orphaned
+# under); JSON Schema validation supersedes it, so this script asserts the
+# schema-validation error path instead of that retired warning.
 
 # Without --change, both change folders are checked and the broken one
-# fails the run.
+# fails the run: its proposal is missing an issue AND its spec.yaml delta
+# violates the schema (an op outside the allowed set).
 exitcode 1 lifecycle validate --stage refine
 stdout 'broken.*proposal\.md.*missing a non-empty "issue" field'
-stdout 'has-warning.*appears under an unrecognized section heading'
+stdout 'broken.*spec\.yaml.*schema validation failed at "/deltas/0/op"'
 
-# With --change, only the named (well-formed but warning-carrying) folder
-# is checked, and a warning alone keeps the exit code at 0.
-exitcode 0 lifecycle validate --stage refine --change has-warning
-stdout '\[warning\].*appears under an unrecognized section heading'
-stdout 'validate: 1 change\(s\), 0 error\(s\), 1 warning\(s\)'
+# With --change, only the named (well-formed) folder is checked, and it
+# validates clean — exit 0, no errors, no warnings.
+exitcode 0 lifecycle validate --stage refine --change well-formed
+stdout 'validate: 1 change\(s\), 0 error\(s\), 0 warning\(s\)'
 
--- openspec/changes/has-warning/proposal.md --
+-- openspec/changes/well-formed/proposal.md --
 ---
 issue: "kentra-io/kafka-dq#7"
 ---
@@ -30,21 +36,21 @@ x
 ## Impact
 - x
 
--- openspec/changes/has-warning/specs/auth/spec.md --
-## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow login.
-
-#### Scenario: ok
-- **GIVEN** a
-- **WHEN** b
-- **THEN** c
-
-## Notes
-
-### Requirement: Orphaned under Notes
-This one would be silently dropped by the fold.
+-- openspec/changes/well-formed/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login
+      text: The system SHALL allow login.
+      scenarios:
+        - name: ok
+          given:
+            - a
+          when:
+            - b
+          then:
+            - c
 
 -- openspec/changes/broken/proposal.md --
 ---
@@ -62,13 +68,18 @@ x
 ## Impact
 - x
 
--- openspec/changes/broken/specs/auth/spec.md --
-## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow login.
-
-#### Scenario: ok
-- **GIVEN** a
-- **WHEN** b
-- **THEN** c
+-- openspec/changes/broken/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: NOTES
+    requirement:
+      name: Orphaned op
+      text: The system SHALL be rejected by the schema.
+      scenarios:
+        - name: ok
+          given:
+            - a
+          when:
+            - b
+          then:
+            - c

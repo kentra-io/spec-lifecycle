@@ -37,6 +37,45 @@ func TestMain(m *testing.M) {
 				os.Exit(exitCode(err))
 			}
 		},
+		// milestoned-plan-dag is the companion plan primitive the archive
+		// step-completion gate (internal/archive/tasks_gate.go) and the
+		// plan-stage gate shell out to (design D6). The real binary is not a
+		// dependency of this repo's tests, so this hermetic stub stands in
+		// for it on PATH (testscript makes every registered name an
+		// executable the in-process `lifecycle` can exec):
+		//
+		//   - `resolve <planPath>` echoes the plan file verbatim — the e2e
+		//     fixtures author plan.yaml directly in the `milestones:`
+		//     done-state shape internal/plandag.Resolve reads, so no separate
+		//     oracle output file is needed.
+		//   - `validate <planPath>` / `version` succeed trivially.
+		"milestoned-plan-dag": func() {
+			args := os.Args[1:]
+			if len(args) == 0 {
+				os.Exit(0)
+			}
+			switch args[0] {
+			case "resolve":
+				if len(args) < 2 {
+					fmt.Fprintln(os.Stderr, "milestoned-plan-dag resolve: missing plan path")
+					os.Exit(2)
+				}
+				data, err := os.ReadFile(args[1])
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "milestoned-plan-dag resolve: %v\n", err)
+					os.Exit(2)
+				}
+				os.Stdout.Write(data) //nolint:errcheck
+			case "version":
+				fmt.Fprintln(os.Stdout, "milestoned-plan-dag version 0.1.0")
+			case "validate":
+				// A stub always reports the plan valid.
+			default:
+				fmt.Fprintf(os.Stderr, "milestoned-plan-dag: unknown command %q\n", args[0])
+				os.Exit(2)
+			}
+			os.Exit(0)
+		},
 	})
 }
 

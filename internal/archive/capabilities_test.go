@@ -36,16 +36,16 @@ func TestDiscoverCapabilitiesPropagatesNonNotExistReadDirError(t *testing.T) {
 	}
 }
 
-func TestDiscoverCapabilitiesSkipsStrayFilesAndCapsWithoutSpecMd(t *testing.T) {
+func TestDiscoverCapabilitiesSkipsStrayFilesAndCapsWithoutSpecYAML(t *testing.T) {
 	changeDir := t.TempDir()
 	// A stray non-directory entry directly under specs/.
 	writeFile(t, filepath.Join(changeDir, "specs", "README.md"), "not a capability")
-	// A capability directory with no spec.md inside it.
+	// A capability directory with no spec.yaml inside it.
 	if err := os.MkdirAll(filepath.Join(changeDir, "specs", "empty-cap"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	// A genuine capability.
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), "## ADDED Requirements\n")
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), "capability: auth\ndeltas: []\n")
 
 	caps, err := discoverCapabilities(changeDir)
 	if err != nil {

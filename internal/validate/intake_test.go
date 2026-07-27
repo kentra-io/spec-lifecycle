@@ -72,7 +72,7 @@ func TestHasSpecsDeltas(t *testing.T) {
 	if HasSpecsDeltas(dir) {
 		t.Errorf("HasSpecsDeltas on empty dir = true, want false")
 	}
-	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(dir, "specs", "auth", "spec.yaml"), "capability: auth\ndeltas: []\n")
 	if !HasSpecsDeltas(dir) {
 		t.Errorf("HasSpecsDeltas after writing a delta = false, want true")
 	}

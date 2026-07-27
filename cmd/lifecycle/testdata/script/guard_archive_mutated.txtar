@@ -1,16 +1,16 @@
 # A hand-edit to an archived change's delta (changes/archive/**) is
 # caught by check 1 (immutability): the folder's content hash no longer
-# matches its ledger record's archiveManifestSha. Editing the delta's
-# CONTENT also changes what check 3 (from-empty replay) would now
-# recompute, so a replay/projection_drift finding rides along too — both
-# are asserted for below, since guard pools every problem it finds rather
-# than stopping at the first.
+# matches its ledger record's archiveManifestSha. Editing the archived
+# YAML delta's CONTENT also changes what check 3 (from-empty replay) would
+# now recompute, so a replay/projection_drift finding rides along too —
+# both are asserted for below, since guard pools every problem it finds
+# rather than stopping at the first.
 
 env HOME=/no-home
 
 exec lifecycle archive 001-add-password-login
 
-cp mutated-auth-delta.md openspec/changes/archive/001-add-password-login/specs/auth/spec.md
+cp mutated-auth-delta.yaml openspec/changes/archive/001-add-password-login/specs/auth/spec.yaml
 
 exitcode 1 lifecycle guard --format json
 stdout '"check": "immutability"'
@@ -30,15 +30,21 @@ consentPolicy: off
 ## Why
 The `auth` capability does not yet exist.
 
--- openspec/changes/001-add-password-login/specs/auth/spec.md --
-## ADDED Requirements
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login with correct password
-- **GIVEN** a registered user with a known password
-- **WHEN** the user submits the correct username and password
-- **THEN** the system SHALL grant an authenticated session
+-- openspec/changes/001-add-password-login/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login
+      text: The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: Successful login with correct password
+          given:
+            - a registered user with a known password
+          when:
+            - the user submits the correct username and password
+          then:
+            - the system SHALL grant an authenticated session
 
 -- openspec/changes/001-add-password-login/approval-state.json --
 {
@@ -59,12 +65,18 @@ The system SHALL allow a registered user to authenticate with a username and pas
   ]
 }
 
--- mutated-auth-delta.md --
-## ADDED Requirements
-### Requirement: Password login HACKED
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login with correct password
-- **GIVEN** a registered user with a known password
-- **WHEN** the user submits the correct username and password
-- **THEN** the system SHALL grant an authenticated session
+-- mutated-auth-delta.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login HACKED
+      text: The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: Successful login with correct password
+          given:
+            - a registered user with a known password
+          when:
+            - the user submits the correct username and password
+          then:
+            - the system SHALL grant an authenticated session

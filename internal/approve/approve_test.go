@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kentra-io/spec-lifecycle/internal/constitution"
+	"github.com/kentra-io/spec-lifecycle/internal/plandag"
 	"github.com/kentra-io/spec-lifecycle/internal/schema"
 )
 
@@ -42,6 +43,20 @@ func fakeConstitutionBin(t *testing.T, code int, stdout, stderr string) string {
 	return os.Args[0]
 }
 
+// fakePlanDAGBin points internal/plandag.Locate at this test binary (via the
+// LIFECYCLE_PLAN_DAG_BIN override) configured to exit `code` and print
+// `stdout`/`stderr` — the injectable stub the plan/fix-stage gate tests use,
+// mirroring internal/validate's plan_gate_test.go. It reuses the same
+// GO_WANT_HELPER_PROCESS re-exec idiom as fakeConstitutionBin.
+func fakePlanDAGBin(t *testing.T, code int, stdout, stderr string) {
+	t.Helper()
+	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
+	t.Setenv("HELPER_EXIT", strconv.Itoa(code))
+	t.Setenv("HELPER_STDOUT", stdout)
+	t.Setenv("HELPER_STDERR", stderr)
+	t.Setenv(plandag.EnvBinOverride, os.Args[0])
+}
+
 // --- fixtures ---
 
 const validProposal = `---
@@ -59,6 +74,26 @@ Users need to authenticate.
 
 ## Impact
 - New capability: auth.
+`
+
+// validDeltaYAML is the refine/repro-stage spec delta in its authoritative
+// YAML form (change 007, design D2) — the markdown validDelta above is
+// retained only for the few tests that still exercise markdown-shaped input.
+const validDeltaYAML = `capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: 'Password login'
+      text: |
+        The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: 'Successful login'
+          given:
+            - 'a registered user'
+          when:
+            - 'they submit correct credentials'
+          then:
+            - 'the system SHALL grant a session'
 `
 
 const validDelta = `## ADDED Requirements
@@ -137,7 +172,7 @@ func offGate() ConsentGate { return ConsentGate{Policy: "off"} }
 func TestApproveConsentStrictRefusesWithoutApprove(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{
 		Root: root, Change: "042-user-auth", Stage: StageRefine,
@@ -155,7 +190,7 @@ func TestApproveConsentStrictRefusesWithoutApprove(t *testing.T) {
 func TestApproveConsentStrictWithApproveFlagSucceeds(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{
 		Root: root, Change: "042-user-auth", Stage: StageRefine,
@@ -173,7 +208,7 @@ func TestApproveConsentStrictWithApproveFlagSucceeds(t *testing.T) {
 func TestApproveConsentOffProceedsWithoutApprove(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
 	if _, err := Approve(req); err != nil {
@@ -253,7 +288,7 @@ func TestApproveMissingChangeDir(t *testing.T) {
 func TestApproveHashesRealFileContent(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
 	res, err := Approve(req)
@@ -268,15 +303,15 @@ func TestApproveHashesRealFileContent(t *testing.T) {
 	if got := res.Entry.Artifacts["proposal.md"]; got != want {
 		t.Errorf("Artifacts[proposal.md] = %q, want %q", got, want)
 	}
-	if _, ok := res.Entry.Artifacts["specs/auth/spec.md"]; !ok {
-		t.Errorf("Artifacts = %v, want a specs/auth/spec.md entry", res.Entry.Artifacts)
+	if _, ok := res.Entry.Artifacts["specs/auth/spec.yaml"]; !ok {
+		t.Errorf("Artifacts = %v, want a specs/auth/spec.yaml entry", res.Entry.Artifacts)
 	}
 }
 
 func TestApproveConstitutionHashOmittedWithWarningWhenAbsent(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
 	res, err := Approve(req)
@@ -294,7 +329,7 @@ func TestApproveConstitutionHashOmittedWithWarningWhenAbsent(t *testing.T) {
 func TestApproveConstitutionHashPopulatedWhenPresent(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 	writeFile(t, filepath.Join(root, "constitution", "constitution.md"), "# Constitution\n\nNo rules yet.\n")
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
@@ -343,7 +378,7 @@ type: bug
 
 # Fix panic on empty input
 `)
-	writeFile(t, filepath.Join(changeDir, "specs", "parser", "spec.md"), "## ADDED Requirements\n\nnot a valid requirement heading\n")
+	writeFile(t, filepath.Join(changeDir, "specs", "parser", "spec.yaml"), "capability: parser\ndeltas:\n  - op: ADDED\n    requirement:\n      name: 'no scenarios here'\n      text: 'The system SHALL do something.'\n")
 
 	req := Request{Root: root, Change: "007-fix-panic", Stage: StageRepro, Consent: offGate()}
 	res, err := Approve(req)
@@ -355,43 +390,48 @@ type: bug
 	}
 }
 
-func TestApproveFixOptionalTasksAbsent(t *testing.T) {
+func TestApproveFixRequiresPlan(t *testing.T) {
+	// Change 007 (M6) retired tasks.md; the fix stage now validates plan.yaml
+	// the same way the plan stage does. With no plan.yaml present the gate
+	// refuses (missing_artifact), exactly as the plan stage would.
 	root, _ := newProject(t, "007-fix-panic")
 	req := Request{Root: root, Change: "007-fix-panic", Stage: StageFix, Consent: offGate()}
 	res, err := Approve(req)
-	if err != nil {
-		t.Fatalf("Approve() error = %v, want success (tasks.md is optional for fix)", err)
+	if !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("Approve() error = %v, want ErrInvalidArtifact (plan.yaml required for fix)", err)
 	}
-	if len(res.Entry.Artifacts) != 0 {
-		t.Errorf("Artifacts = %v, want empty (no tasks.md present)", res.Entry.Artifacts)
+	if len(res.Findings) == 0 {
+		t.Error("Findings is empty, want the missing_artifact finding")
 	}
 }
 
-func TestApproveFixValidatesTasksWhenPresent(t *testing.T) {
+func TestApproveFixInvalidPlanRefused(t *testing.T) {
 	root, changeDir := newProject(t, "007-fix-panic")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), "## Milestone 1: incomplete\n**Goal** — x\n")
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
+	fakePlanDAGBin(t, 1, "", "milestone 2: dependency cycle\n")
 
 	req := Request{Root: root, Change: "007-fix-panic", Stage: StageFix, Consent: offGate()}
 	res, err := Approve(req)
 	if !errors.Is(err, ErrInvalidArtifact) {
-		t.Fatalf("Approve() error = %v, want ErrInvalidArtifact (tasks.md missing required labels)", err)
+		t.Fatalf("Approve() error = %v, want ErrInvalidArtifact (milestoned-plan-dag reported the plan invalid)", err)
 	}
 	if len(res.Findings) == 0 {
-		t.Error("Findings is empty, want missing-label findings")
+		t.Error("Findings is empty, want an invalid_plan finding")
 	}
 }
 
-func TestApproveFixWellFormedTasks(t *testing.T) {
+func TestApproveFixWellFormedPlan(t *testing.T) {
 	root, changeDir := newProject(t, "007-fix-panic")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), validTasks)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
+	fakePlanDAGBin(t, 0, "plan is valid\n", "")
 
 	req := Request{Root: root, Change: "007-fix-panic", Stage: StageFix, Consent: offGate()}
 	res, err := Approve(req)
 	if err != nil {
 		t.Fatalf("Approve() error = %v", err)
 	}
-	if _, ok := res.Entry.Artifacts["tasks.md"]; !ok {
-		t.Errorf("Artifacts = %v, want tasks.md hashed", res.Entry.Artifacts)
+	if _, ok := res.Entry.Artifacts["plan.yaml"]; !ok {
+		t.Errorf("Artifacts = %v, want plan.yaml hashed", res.Entry.Artifacts)
 	}
 }
 
@@ -545,7 +585,7 @@ func TestApproveRejectSkipsDeviationGate(t *testing.T) {
 func TestAppendEntryIsAppendOnly(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
 	if _, err := Approve(req); err != nil {
@@ -590,7 +630,7 @@ func TestLatestPerStageTieBreaksOnArrayOrder(t *testing.T) {
 func TestHashDriftDetectsEditAndDeletion(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 
 	req := Request{Root: root, Change: "042-user-auth", Stage: StageRefine, Consent: offGate()}
 	res, err := Approve(req)
@@ -602,7 +642,7 @@ func TestHashDriftDetectsEditAndDeletion(t *testing.T) {
 	}
 
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal+"\nextra line\n")
-	if err := os.Remove(filepath.Join(changeDir, "specs", "auth", "spec.md")); err != nil {
+	if err := os.Remove(filepath.Join(changeDir, "specs", "auth", "spec.yaml")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -623,11 +663,11 @@ func TestArtifactGlobsResolvesFromSchema(t *testing.T) {
 		stage Stage
 		want  []string
 	}{
-		{StageRefine, []string{"proposal.md", "specs/**/spec.md"}},
+		{StageRefine, []string{"proposal.md", "specs/**/spec.yaml"}},
 		{StageDesign, []string{"design.md"}},
-		{StagePlan, []string{"tasks.md"}},
-		{StageRepro, []string{"proposal.md", "specs/**/spec.md"}},
-		{StageFix, []string{"tasks.md"}},
+		{StagePlan, []string{"plan.yaml"}},
+		{StageRepro, []string{"proposal.md", "specs/**/spec.yaml"}},
+		{StageFix, []string{"plan.yaml"}},
 	}
 	for _, tt := range tests {
 		got, err := ArtifactGlobs(def, tt.stage)
@@ -657,7 +697,8 @@ func TestArtifactGlobsUnrecognizedStage(t *testing.T) {
 
 func TestValidateForStagePlan(t *testing.T) {
 	changeDir := t.TempDir()
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), validTasks)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
+	fakePlanDAGBin(t, 0, "plan is valid\n", "")
 	findings, err := validateForStage(changeDir, StagePlan)
 	if err != nil {
 		t.Fatalf("validateForStage(plan): %v", err)
@@ -834,7 +875,7 @@ func TestConsentGateConfirmInteractiveDeclined(t *testing.T) {
 func TestApproveConstitutionHashReadErrorSurfacesAsErrCouldNotRun(t *testing.T) {
 	root, changeDir := newProject(t, "042-user-auth")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), validDelta)
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), validDeltaYAML)
 	// constitution/constitution.md as a directory makes os.ReadFile fail
 	// with something other than IsNotExist, so constitution.Hash returns a
 	// genuine error rather than its (hash="", ok=false, err=nil) "absent" case.

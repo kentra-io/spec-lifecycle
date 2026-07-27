@@ -20,7 +20,7 @@ send the human to `/lifecycle-bug` instead — this skill is feature-only.
   human explicitly confirms the drafted text.
 - A seeded change folder, `openspec/changes/<issue-number>-<slug>/`, holding
   a **stub** `proposal.md` — frontmatter filled in (`issue:`, `type: feature`),
-  body left as a placeholder. No `specs/**/spec.md` delta, no `design.md`,
+  body left as a placeholder. No `specs/**/spec.yaml` delta, no `design.md`,
   no `approval-state.json` entry. Real requirements are `refine`'s job, not
   this one.
 
@@ -79,7 +79,7 @@ send the human to `/lifecycle-bug` instead — this skill is feature-only.
 - Never create the GitHub issue without the human's explicit, conversational
   confirmation of the exact title and body — and never treat silence or a
   topic change as approval.
-- Never write a `specs/<capability>/spec.md` delta — intake sits above
+- Never write a `specs/<capability>/spec.yaml` delta — intake sits above
   gate 1 and produces no spec contract.
 - Never write or append to `approval-state.json` — intake leaves no
   lifecycle gate record.

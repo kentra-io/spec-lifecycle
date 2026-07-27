@@ -104,9 +104,9 @@ func validateSpecsDeltas(dir string) ([]Finding, error) {
 }
 
 // findSpecYAMLFiles returns every "spec.yaml" file under root, sorted — the
-// refine-stage delta artifact (change 007). It is distinct from findSpecFiles
-// (spec.md) which still backs HasSpecsDeltas for the not-yet-retargeted
-// archive/approve callers.
+// owned YAML delta artifact (change 007). It backs both the refine-stage
+// delta validation and HasSpecsDeltas (internal/approve, internal/archive),
+// all now on the YAML source of truth (M8).
 func findSpecYAMLFiles(root string) ([]string, error) {
 	if _, err := os.Stat(root); err != nil {
 		return nil, err
@@ -117,30 +117,6 @@ func findSpecYAMLFiles(root string) ([]string, error) {
 			return err
 		}
 		if !d.IsDir() && d.Name() == "spec.yaml" {
-			paths = append(paths, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(paths)
-	return paths, nil
-}
-
-// findSpecFiles returns every "spec.md" file under root, sorted. Retained for
-// HasSpecsDeltas (internal/approve, internal/archive), whose retarget to YAML
-// is out of this milestone's scope.
-func findSpecFiles(root string) ([]string, error) {
-	if _, err := os.Stat(root); err != nil {
-		return nil, err
-	}
-	var paths []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && d.Name() == "spec.md" {
 			paths = append(paths, path)
 		}
 		return nil

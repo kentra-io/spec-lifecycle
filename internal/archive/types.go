@@ -15,13 +15,13 @@ var (
 	// MODIFIED/REMOVED/RENAMED, and req.ForceConflicts was false: nothing
 	// was written.
 	ErrConflict = errors.New("archive: refused — a conflicting in-flight change touches the same requirement")
-	// ErrTasksIncomplete means the tasks-completion gate
-	// (tasks_gate.go — harness orchestration.md §5.5) found at least one
-	// checkbox-tracked Steps item in tasks.md that is not checked, and
-	// req.ForceIncompleteTasks was false: nothing was written. A tasks.md
-	// with no tracked steps at all (or no tasks.md) never triggers this —
-	// see tasks_gate.go's doc comment.
-	ErrTasksIncomplete = errors.New("archive: refused — tasks.md has unchecked tracked step(s)")
+	// ErrTasksIncomplete means the step-completion gate
+	// (tasks_gate.go — design D6) found at least one plan milestone that
+	// `milestoned-plan-dag resolve` reports not done, and
+	// req.ForceIncompleteTasks was false: nothing was written. A change with
+	// no plan.yaml at all never triggers this — see tasks_gate.go's doc
+	// comment.
+	ErrTasksIncomplete = errors.New("archive: refused — the change's plan has an outstanding milestone")
 	// ErrFoldFailed means internal/spec.Fold refused this change's delta
 	// against the live capability spec (e.g. MODIFIED of a requirement
 	// that no longer exists) — a content problem in the delta itself, not

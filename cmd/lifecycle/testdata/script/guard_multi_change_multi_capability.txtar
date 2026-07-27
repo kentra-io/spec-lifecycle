@@ -1,9 +1,8 @@
 # Multi-change, multi-capability history: three archives across two
 # capabilities (auth, billing), the second auth change modifying what the
 # first one added. `lifecycle guard`'s from-empty replay must reproduce
-# BOTH capabilities' live projections byte-exactly, and the digest chain
-# across all four ledger records must hold — implementation-plan.md M5
-# DoD's "multi-change multi-capability history replays byte-exact".
+# BOTH capabilities' live projections byte-exactly from the archived YAML
+# deltas, and the digest chain across all three ledger records must hold.
 
 env HOME=/no-home
 
@@ -28,15 +27,21 @@ consentPolicy: off
 ## Why
 The `auth` capability does not yet exist.
 
--- openspec/changes/001-add-password-login/specs/auth/spec.md --
-## ADDED Requirements
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login with correct password
-- **GIVEN** a registered user with a known password
-- **WHEN** the user submits the correct username and password
-- **THEN** the system SHALL grant an authenticated session
+-- openspec/changes/001-add-password-login/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: Password login
+      text: The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: Successful login with correct password
+          given:
+            - a registered user with a known password
+          when:
+            - the user submits the correct username and password
+          then:
+            - the system SHALL grant an authenticated session
 
 -- openspec/changes/001-add-password-login/approval-state.json --
 {
@@ -63,15 +68,21 @@ The system SHALL allow a registered user to authenticate with a username and pas
 ## Why
 The `billing` capability does not yet exist.
 
--- openspec/changes/002-add-invoicing/specs/billing/spec.md --
-## ADDED Requirements
-### Requirement: Invoice generation
-The system SHALL generate an invoice at the end of each billing period.
-
-#### Scenario: Invoice generated on schedule
-- **GIVEN** an active billing period ends
-- **WHEN** the billing job runs
-- **THEN** the system SHALL generate an invoice for the account
+-- openspec/changes/002-add-invoicing/specs/billing/spec.yaml --
+capability: billing
+deltas:
+  - op: ADDED
+    requirement:
+      name: Invoice generation
+      text: The system SHALL generate an invoice at the end of each billing period.
+      scenarios:
+        - name: Invoice generated on schedule
+          given:
+            - an active billing period ends
+          when:
+            - the billing job runs
+          then:
+            - the system SHALL generate an invoice for the account
 
 -- openspec/changes/002-add-invoicing/approval-state.json --
 {
@@ -98,15 +109,21 @@ The system SHALL generate an invoice at the end of each billing period.
 ## Why
 Tighten login further.
 
--- openspec/changes/003-mfa/specs/auth/spec.md --
-## MODIFIED Requirements
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password, now with rate limiting.
-
-#### Scenario: Successful login with correct password
-- **GIVEN** a registered user with a known password
-- **WHEN** the user submits the correct username and password
-- **THEN** the system SHALL grant an authenticated session
+-- openspec/changes/003-mfa/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: MODIFIED
+    requirement:
+      name: Password login
+      text: The system SHALL allow a registered user to authenticate with a username and password, now with rate limiting.
+      scenarios:
+        - name: Successful login with correct password
+          given:
+            - a registered user with a known password
+          when:
+            - the user submits the correct username and password
+          then:
+            - the system SHALL grant an authenticated session
 
 -- openspec/changes/003-mfa/approval-state.json --
 {
