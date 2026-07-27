@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v3"
+	yaml "go.yaml.in/yaml/v3"
 
 	"github.com/kentra-io/spec-lifecycle/internal/status"
 )
@@ -43,7 +43,7 @@ func statusCommand() *cli.Command {
 			"unreadable change folder).",
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "change", Usage: "report only this change (default: every change under openspec/changes/)"},
-			&cli.StringFlag{Name: "format", Value: "text", Usage: "output format: text|json"},
+			&cli.StringFlag{Name: "format", Value: "text", Usage: "output format: text|yaml"},
 		},
 		OnUsageError: func(_ context.Context, _ *cli.Command, err error, _ bool) error {
 			return &exitError{err: fmt.Errorf("status: %w", err), code: statusExitCouldNotRun}
@@ -56,9 +56,9 @@ func statusCommand() *cli.Command {
 
 func runStatus(cmd *cli.Command) error {
 	format := cmd.String("format")
-	if format != "text" && format != "json" {
+	if format != "text" && format != "yaml" {
 		return &exitError{
-			err:  fmt.Errorf("status: --format must be %q or %q (got %q)", "text", "json", format),
+			err:  fmt.Errorf("status: --format must be %q or %q (got %q)", "text", "yaml", format),
 			code: statusExitCouldNotRun,
 		}
 	}
@@ -101,12 +101,24 @@ func runStatus(cmd *cli.Command) error {
 		results = append(results, cs)
 	}
 
+	// Oversized-capability warnings are derived from the live spec.md
+	// projections under openspec/specs (status-reporting spec, requirement
+	// "Machine-readable capability warnings"). Surfaced in both --format text
+	// and --format yaml so the two outputs carry the same data.
+	warnings, err := status.CapabilityWarnings(
+		filepath.Join(cwd, "openspec", "specs"),
+		status.DefaultCapabilitySizeWarningLines,
+	)
+	if err != nil {
+		return &exitError{err: fmt.Errorf("status: %w", err), code: statusExitCouldNotRun}
+	}
+
 	stdout := cmd.Root().Writer
 	var writeErr error
-	if format == "json" {
-		writeErr = writeStatusJSON(stdout, results)
+	if format == "yaml" {
+		writeErr = writeStatusYAML(stdout, results, warnings)
 	} else {
-		writeErr = writeStatusText(stdout, results)
+		writeErr = writeStatusText(stdout, results, warnings)
 	}
 	if writeErr != nil {
 		return &exitError{err: fmt.Errorf("status: writing output: %w", writeErr), code: statusExitCouldNotRun}
@@ -114,16 +126,27 @@ func runStatus(cmd *cli.Command) error {
 	return nil
 }
 
-func writeStatusJSON(w io.Writer, results []status.ChangeStatus) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(struct {
-		Changes []status.ChangeStatus `json:"changes"`
-	}{Changes: results})
+// statusDoc is the machine-readable (`--format yaml`) status document: the
+// per-change gate report plus the oversized-capability warnings sequence.
+type statusDoc struct {
+	Changes            []status.ChangeStatus      `yaml:"changes"`
+	CapabilityWarnings []status.CapabilityWarning `yaml:"capabilityWarnings"`
 }
 
-func writeStatusText(w io.Writer, results []status.ChangeStatus) error {
-	if len(results) == 0 {
+func writeStatusYAML(w io.Writer, results []status.ChangeStatus, warnings []status.CapabilityWarning) error {
+	if warnings == nil {
+		warnings = []status.CapabilityWarning{}
+	}
+	enc := yaml.NewEncoder(w)
+	enc.SetIndent(2)
+	if err := enc.Encode(statusDoc{Changes: results, CapabilityWarnings: warnings}); err != nil {
+		return err
+	}
+	return enc.Close()
+}
+
+func writeStatusText(w io.Writer, results []status.ChangeStatus, warnings []status.CapabilityWarning) error {
+	if len(results) == 0 && len(warnings) == 0 {
 		_, err := fmt.Fprintln(w, "status: no change folders found")
 		return err
 	}
@@ -137,6 +160,16 @@ func writeStatusText(w io.Writer, results []status.ChangeStatus) error {
 				line += fmt.Sprintf(" [drift: %v]", g.Drifted)
 			}
 			if _, err := fmt.Fprintln(w, line); err != nil {
+				return err
+			}
+		}
+	}
+	if len(warnings) > 0 {
+		if _, err := fmt.Fprintln(w, "capability warnings:"); err != nil {
+			return err
+		}
+		for _, cw := range warnings {
+			if _, err := fmt.Fprintf(w, "  %s: %d lines\n", cw.Capability, cw.Lines); err != nil {
 				return err
 			}
 		}
