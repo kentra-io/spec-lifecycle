@@ -77,8 +77,7 @@ Users need to authenticate.
 `
 
 // validDeltaYAML is the refine/repro-stage spec delta in its authoritative
-// YAML form (change 007, design D2) — the markdown validDelta above is
-// retained only for the few tests that still exercise markdown-shaped input.
+// YAML form (change 007, design D2) — the only delta shape these tests use.
 const validDeltaYAML = `capability: auth
 deltas:
   - op: ADDED
@@ -94,17 +93,6 @@ deltas:
             - 'they submit correct credentials'
           then:
             - 'the system SHALL grant a session'
-`
-
-const validDelta = `## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login
-- **GIVEN** a registered user
-- **WHEN** they submit correct credentials
-- **THEN** the system SHALL grant a session
 `
 
 const validDesign = `# Add password login — Design
@@ -130,17 +118,6 @@ Use bcrypt.
 
 ## Risks / Trade-offs
 None known.
-`
-
-const validTasks = `## Milestone 1: Password login
-**Goal** — implement password-based login.
-**Deliverables** — login handler, session cookie.
-**Validation contract** — checkable acceptance criteria, pre-committed:
-  - ` + "`go test ./auth/...`" + ` passes
-  - Scenario "Successful login" passes
-**Steps** — ordered breakdown, sized per ` + "`planGranularity`" + `:
-  1. Implement login handler
-  2. Write scenario test
 `
 
 func writeFile(t *testing.T, path, content string) {

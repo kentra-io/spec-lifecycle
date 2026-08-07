@@ -1,39 +1,38 @@
-// Package spec is the format engine: the pure-Go, parse/render half of
-// spec-lifecycle's reimplementation of the OpenSpec on-disk format
-// (implementation-plan.md §0.5, §2.3; spec-lifecycle.md §6.1), pinned to the
-// grammar of `@fission-ai/openspec` v1.5.0 (commit 546224e).
+// Package spec is the format engine: the pure-Go parse / validate / fold /
+// render half of spec-lifecycle (implementation-plan.md §0.5, §2.3;
+// spec-lifecycle.md §6.1). The format is owned here — structured YAML
+// described by two JSON Schemas published with the tool — not a
+// compatibility layer over any external tool's grammar (constitution
+// ADR-0004, ADR-0005).
 //
-// Two document shapes share one grammar:
+// Two document shapes share one requirement/scenario sub-shape, which the
+// schemas share by $ref (design D4):
 //
-//   - A living capability spec — openspec/specs/<capability>/spec.md — an
-//     ordered set of "### Requirement:" blocks inside a single
-//     "## Requirements" section. Parsed by ParseRequirementSet into a
-//     *RequirementSet.
-//   - A change's capability delta — openspec/changes/<change>/specs/<capability>/spec.md
-//     — the same requirement-block grammar, but grouped under up to four
-//     "## ADDED|MODIFIED|REMOVED|RENAMED Requirements" sections. Parsed by
-//     ParseDelta into a *Delta.
+//   - A living capability spec — openspec/specs/<capability>/spec.yaml — a
+//     capability name, an optional purpose, and an ordered sequence of
+//     requirements, each with an ordered sequence of scenarios carrying
+//     given/when/then clause sequences. Parsed by ParseLivingSpecYAML into a
+//     *LivingSpec.
+//   - A change's capability delta —
+//     openspec/changes/<change>/specs/<capability>/spec.yaml — the same
+//     requirement shape wrapped in op-tagged entries
+//     (ADDED/MODIFIED/REMOVED/RENAMED). Parsed by ParseDeltaYAML into a
+//     *Delta.
 //
-// Byte fidelity. This package never reformats a requirement's interior: a
-// Requirement's Raw field is the exact source bytes of its block (header
-// line through its last scenario), and RequirementSet.Render re-emits those
-// Raw blocks verbatim, joined by the same fixed separators OpenSpec's own
-// fold uses (single blank line between blocks; a single newline between a
-// section header and its body). That is deliberate — it mirrors how
-// OpenSpec's `buildUpdatedSpec` achieves byte-stable folding (it relocates
-// untouched raw blocks rather than re-serializing parsed fields), and it is
-// what makes this package's round-trip properties hold:
+// One-way projection. Markdown is never parsed and never hand-authored: it
+// is a deterministic, read-only projection rendered from the YAML source by
+// LivingSpec.RenderProjection, carrying a derived kebab-slug per requirement
+// and per scenario (design D3/D5). Because the projection is one-way, there
+// is no round-trip contract to preserve and the model carries no
+// byte-fidelity Raw field — rendering is byte-stable instead: fixed section
+// and key order, LF endings, no trailing whitespace, a single trailing
+// newline. That byte-stability is what lets checked-in golden fixtures and
+// `lifecycle guard`'s from-empty replay prove fold and projection
+// correctness (constitution ADR-0003, ADR-0005).
 //
-//   - parse(render(x)) == x for any *RequirementSet x built by this package
-//     (by the parser, or by NewRequirement + direct struct construction of
-//     RequirementSet) — rendering and re-parsing recovers the same value.
-//   - render(parse(b)) converges to a stable canonical form for arbitrary
-//     well-formed input bytes b — re-rendering that canonical form is a
-//     fixed point (parsing it again and rendering again yields identical
-//     bytes), even though b's own incidental whitespace may not survive the
-//     first pass unchanged.
-//
-// Grammar decisions made where the v1.5.0 source was internally ambiguous
-// or inconsistent are called out on the relevant regexp var docs in
-// parse.go and delta.go.
+// Ordering. Requirements and scenarios are sequences, not maps: author order
+// is projection order and must be preserved, and a map keyed by name could
+// not surface a duplicate name at parse time (design D1). Slugs are derived
+// at render time and never stored — a stored slug would be a second source
+// of truth that can drift.
 package spec

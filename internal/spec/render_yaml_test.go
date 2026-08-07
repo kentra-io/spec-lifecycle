@@ -1,10 +1,35 @@
 package spec
 
 import (
+	"flag"
 	"os"
 	"strings"
 	"testing"
 )
+
+// update regenerates the checked-in golden projections instead of comparing
+// against them (`go test ./internal/spec/ -update`). Golden fixtures are the
+// projection's correctness proof (constitution ADR-0005), so refreshing them
+// is always a deliberate, reviewed act.
+var update = flag.Bool("update", false, "update golden files in testdata/")
+
+// goldenBytes asserts got is byte-identical to the golden file at path, or
+// rewrites that file when -update is set.
+func goldenBytes(t *testing.T, path string, got []byte) {
+	t.Helper()
+	if *update {
+		if err := os.WriteFile(path, got, 0o644); err != nil {
+			t.Fatalf("writing golden file: %v", err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading golden file: %v", err)
+	}
+	if string(want) != string(got) {
+		t.Fatalf("golden mismatch for %s (run `go test -run <this test> -update` to refresh if the change is intentional):\n--- want ---\n%s\n--- got ---\n%s", path, want, got)
+	}
+}
 
 // TestSlug is the D5 slug-derivation table test: lowercase, each maximal run
 // of non-[a-z0-9] collapses to a single "-", leading/trailing "-" trimmed.

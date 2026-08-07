@@ -96,17 +96,6 @@ Use bcrypt.
 None known.
 `
 
-const validTasks = `## Milestone 1: Password login
-**Goal** — implement password-based login.
-**Deliverables** — login handler, session cookie.
-**Validation contract** — checkable acceptance criteria, pre-committed:
-  - ` + "`go test ./auth/...`" + ` passes
-  - Scenario "Successful login" passes
-**Steps** — ordered breakdown, sized per ` + "`planGranularity`" + `:
-  1. Implement login handler
-  2. Write scenario test
-`
-
 func TestChangeRefineHappyPath(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "proposal.md"), validProposal)

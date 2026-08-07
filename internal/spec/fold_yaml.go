@@ -2,6 +2,7 @@ package spec
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	yaml "go.yaml.in/yaml/v3"
@@ -10,17 +11,37 @@ import (
 // ---------------------------------------------------------------------------
 // YAML parse + fold engine (change 007, Milestone 2 — design D1/D2).
 //
-// These are the structured-model counterparts to the markdown engine in
-// parse.go/delta.go/fold.go. They read the owned YAML source of truth
-// (spec.yaml) into the M1 model (types.go's LivingSpec/SpecDelta) and fold a
-// change delta over the living spec keyed by requirement name in the fixed op
-// order the engine already uses (RENAMED -> REMOVED -> MODIFIED -> ADDED).
+// The sole parse/fold path: reads the owned YAML source of truth (spec.yaml)
+// into the M1 model (types.go's LivingSpec/Delta) and folds a change delta
+// over the living spec keyed by requirement name in the fixed op order
+// (RENAMED -> REMOVED -> MODIFIED -> ADDED).
 //
-// The markdown engine is intentionally left in place: its exported symbols are
-// still consumed out-of-package (internal/archive, internal/guard) and by
-// later-milestone code that retargets them (M3 render, M4 guard, M8 corpus
-// removal). This file adds the YAML paths alongside it (M2-DEV-001, APPROVED).
+// The markdown engine these replaced (parse.go/delta.go/fold.go/render.go and
+// their byte-fidelity Raw model) was deleted once every caller had been
+// retargeted — it carried a pin to an external reference tool's grammar,
+// which constitution ADR-0005 forbids as a compatibility mechanism.
 // ---------------------------------------------------------------------------
+
+// rfc2119Re is the load-bearing keyword check: an added or modified
+// requirement's text must assert a normative SHALL/MUST.
+var rfc2119Re = regexp.MustCompile(`\b(SHALL|MUST)\b`)
+
+// foldKey is the case-insensitive keying every duplicate/conflict check in
+// this package uses.
+func foldKey(name string) string {
+	return strings.ToLower(name)
+}
+
+// missingRFC2119Msg explains a missing SHALL/MUST, calling out the common
+// mistake of putting the keyword in the requirement's name instead of its
+// text.
+func missingRFC2119Msg(op Op, name string) string {
+	base := fmt.Sprintf("%s %q must contain SHALL or MUST", op, name)
+	if rfc2119Re.MatchString(name) {
+		return base + " in the requirement text, not only in the name; move the SHALL/MUST statement into the requirement's `text:` field"
+	}
+	return base
+}
 
 // ParseLivingSpecYAML decodes a living-spec YAML document
 // (openspec/specs/<capability>/spec.yaml) into the structured LivingSpec model

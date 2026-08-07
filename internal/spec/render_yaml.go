@@ -128,7 +128,5 @@ func (ls *LivingSpec) RenderProjection() []byte {
 // its lines as its own markdown line (trailing whitespace is stripped in the
 // final normalization pass).
 func emitBlock(lines *[]string, body string) {
-	for _, line := range strings.Split(strings.TrimRight(body, "\n"), "\n") {
-		*lines = append(*lines, line)
-	}
+	*lines = append(*lines, strings.Split(strings.TrimRight(body, "\n"), "\n")...)
 }

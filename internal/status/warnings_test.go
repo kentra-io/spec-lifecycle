@@ -8,14 +8,14 @@ import (
 
 // writeSpec writes an openspec/specs/<cap>/spec.md projection with exactly n
 // lines under root and returns the specs root.
-func writeSpec(t *testing.T, specsRoot, cap string, n int) {
+func writeSpec(t *testing.T, specsRoot, capability string, n int) {
 	t.Helper()
 	lines := make([]string, n)
 	for i := range lines {
 		lines[i] = "line"
 	}
 	// n lines each newline-terminated -> countLines == n.
-	writeFile(t, filepath.Join(specsRoot, cap, "spec.md"), strings.Join(lines, "\n")+"\n")
+	writeFile(t, filepath.Join(specsRoot, capability, "spec.md"), strings.Join(lines, "\n")+"\n")
 }
 
 // TestCapabilityWarningsFlagsOversized is the status-reporting scenario "YAML

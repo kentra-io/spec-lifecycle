@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 				}
 				os.Stdout.Write(data) //nolint:errcheck
 			case "version":
-				fmt.Fprintln(os.Stdout, "milestoned-plan-dag version 0.1.0")
+				fmt.Fprintln(os.Stdout, "milestoned-plan-dag version 0.1.0") //nolint:errcheck
 			case "validate":
 				// A stub always reports the plan valid.
 			default:
