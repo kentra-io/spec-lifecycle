@@ -6,7 +6,12 @@
 env HOME=/no-home
 
 exitcode 2 lifecycle status --format xml
-stderr 'status: --format must be "text" or "json"'
+stderr 'status: --format must be "text" or "yaml"'
+
+# --format json is removed (change 007, design D8): it is now an invalid
+# format, rejected the same way any other unknown format is.
+exitcode 2 lifecycle status --format json
+stderr 'status: --format must be "text" or "yaml"'
 
 exitcode 2 lifecycle status --change does-not-exist
 stderr 'change "does-not-exist" not found'

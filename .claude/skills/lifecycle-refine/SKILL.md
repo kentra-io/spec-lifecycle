@@ -1,6 +1,6 @@
 ---
 name: lifecycle-refine
-description: Conduct the refine stage of a spec-lifecycle change — proposal.md plus a specs/<capability>/spec.md delta, gated at gate 1. Invoke explicitly with /lifecycle-refine.
+description: Conduct the refine stage of a spec-lifecycle change — proposal.md plus a specs/<capability>/spec.yaml delta, gated at gate 1. Invoke explicitly with /lifecycle-refine.
 disable-model-invocation: true
 ---
 
@@ -21,11 +21,14 @@ drafting anything.
   local, architecturally inert work only — `designSkip: true` proposing to
   skip the `design` stage (spec-lifecycle.md §3.2). If this change is a bug,
   use `/lifecycle-bug` instead; its compressed profile replaces this one.
-- `specs/<capability>/spec.md` — one delta per capability this change
-  touches (`## ADDED|MODIFIED|REMOVED|RENAMED Requirements`, RFC-2119
-  `### Requirement:` blocks each with at least one `#### Scenario:`
-  GIVEN/WHEN/THEN). New capability → its exact kebab-case name; existing
-  capability → its existing folder name under `openspec/specs/`.
+- `specs/<capability>/spec.yaml` — one structured-YAML delta per capability
+  this change touches: a `deltas:` sequence of op-tagged entries
+  (`ADDED|MODIFIED|REMOVED|RENAMED`), keyed by requirement name, each
+  added/modified requirement carrying RFC-2119 `text:` and at least one
+  scenario with `given`/`when`/`then` clauses. The YAML is the hand-edited
+  source of truth; the living spec's `spec.md` is a read-only projection —
+  never author markdown. New capability → its exact kebab-case name;
+  existing capability → its existing folder name under `openspec/specs/`.
 
 Fill both from `openspec/schemas/kentra-spec-lifecycle/templates/{proposal,spec}.md`
 (written by `lifecycle init`) — those templates carry the authoritative
@@ -41,7 +44,7 @@ this change declares must land in exactly one of those three homes.
 
 ## Gate mechanics (spec-lifecycle.md §3.3)
 
-1. Draft `proposal.md` and every touched capability's `specs/<capability>/spec.md`
+1. Draft `proposal.md` and every touched capability's `specs/<capability>/spec.yaml`
    in this change's folder (`openspec/changes/<change>/`).
 2. Run `lifecycle validate --stage refine`. Fix every finding — this is the
    same delta-grammar/structure check `approve` re-runs before writing a

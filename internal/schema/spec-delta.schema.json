@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kentra.io/spec-lifecycle/spec-delta.schema.json",
+  "title": "kentra-spec-lifecycle spec delta",
+  "description": "Structured YAML source of one change's per-capability spec delta (spec-lifecycle change 007, design D2). Op-tagged entries are applied keyed by requirement name in the fixed op order (RENAMED, REMOVED, MODIFIED, ADDED). The requirement/scenario sub-shape is shared with the living-spec schema by $ref (design D4).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capability", "deltas"],
+  "properties": {
+    "capability": { "type": "string", "minLength": 1 },
+    "deltas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/delta" }
+    }
+  },
+  "$defs": {
+    "delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": { "type": "string", "enum": ["ADDED", "MODIFIED", "REMOVED", "RENAMED"] },
+        "requirement": {
+          "$ref": "https://schemas.kentra.io/spec-lifecycle/living-spec.schema.json#/$defs/requirement"
+        },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "op": { "const": "RENAMED" } }, "required": ["op"] },
+          "then": {
+            "required": ["from", "to"],
+            "not": { "required": ["requirement"] }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "enum": ["ADDED", "MODIFIED", "REMOVED"] } },
+            "required": ["op"]
+          },
+          "then": { "required": ["requirement"] }
+        }
+      ]
+    }
+  }
+}

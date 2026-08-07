@@ -8,25 +8,42 @@ import (
 )
 
 // featureArtifactIDs maps each feature-flow stage to the schema.yaml
-// artifact id(s) it gates (spec-lifecycle.md §4's Stage column).
+// artifact id(s) it gates (spec-lifecycle.md §4's Stage column). The plan
+// stage is NOT keyed here: change 007 (M6) removed the schema `tasks`
+// artifact, so the plan/fix stages resolve to plan.yaml directly (see
+// ArtifactGlobs), not via a schema glob.
 var featureArtifactIDs = map[Stage][]string{
-	StageRefine: {"proposal", "specs"},
+	StageRefine: {"proposal"},
 	StageDesign: {"design"},
-	StagePlan:   {"tasks"},
 }
 
-// ArtifactGlobs returns the generates: glob pattern(s) that gate stage,
-// resolved from the embedded kentra-spec-lifecycle schema
-// (implementation-plan.md §2.6: "resolve the stage's artifact set via the
-// schema's generates: globs"). See doc.go's "Bug-flow artifact reuse" for
-// why StageRepro/StageFix resolve to the SAME globs as StageRefine's
-// proposal(+specs)/StagePlan's tasks rather than a second hand-typed
-// literal.
+// specDeltaGlob is the refine/repro-stage delta artifact: the spec delta is
+// authored and read as authoritative YAML (change 007, design D2), mirroring
+// validate.ArtifactsForStage's "specs/**/spec.yaml". The schema's
+// generates:"specs/**/spec.md" names the read-only living-spec markdown
+// projection, not the change-folder delta source — so approve resolves the
+// delta glob directly here rather than via def.Generates("specs").
+const specDeltaGlob = "specs/**/spec.yaml"
+
+// planArtifact is the plan/fix-stage source artifact: plan.yaml, validated
+// by milestoned-plan-dag (change 007, design D6). M6 removed the schema
+// `tasks` artifact, so approve points these stages at plan.yaml directly,
+// mirroring validate.ArtifactsForStage(StagePlan) == "plan.yaml".
+const planArtifact = "plan.yaml"
+
+// ArtifactGlobs returns the generates: glob pattern(s) that gate stage. The
+// proposal/design artifacts resolve via the embedded kentra-spec-lifecycle
+// schema's generates: globs (implementation-plan.md §2.6); the spec delta
+// (refine/repro) and the plan (plan/fix) resolve to their YAML source paths
+// directly (change 007 — the schema no longer names a `tasks` artifact, and
+// its `specs` glob names the markdown projection, not the YAML delta). See
+// doc.go's "Bug-flow artifact reuse" for why StageRepro/StageFix reuse the
+// SAME globs as StageRefine's proposal(+specs)/StagePlan's plan.
 func ArtifactGlobs(def *schema.Definition, stage Stage) ([]string, error) {
 	switch stage {
-	case StageRefine, StageDesign, StagePlan:
+	case StageRefine, StageDesign:
 		ids := featureArtifactIDs[stage]
-		globs := make([]string, 0, len(ids))
+		globs := make([]string, 0, len(ids)+1)
 		for _, id := range ids {
 			g := def.Generates(id)
 			if g == "" {
@@ -34,15 +51,18 @@ func ArtifactGlobs(def *schema.Definition, stage Stage) ([]string, error) {
 			}
 			globs = append(globs, g)
 		}
-		return globs, nil
-	case StageRepro:
-		globs := []string{def.Generates("proposal")}
-		if g := def.Generates("specs"); g != "" {
-			globs = append(globs, g)
+		if stage == StageRefine {
+			globs = append(globs, specDeltaGlob)
 		}
 		return globs, nil
-	case StageFix:
-		return []string{def.Generates("tasks")}, nil
+	case StageRepro:
+		g := def.Generates("proposal")
+		if g == "" {
+			return nil, fmt.Errorf("approve: schema has no generates: glob for artifact %q", "proposal")
+		}
+		return []string{g, specDeltaGlob}, nil
+	case StagePlan, StageFix:
+		return []string{planArtifact}, nil
 	default:
 		return nil, fmt.Errorf("approve: unrecognized stage %q (want one of %v)", stage, Stages)
 	}
@@ -64,9 +84,9 @@ func requiresDeviation(stage Stage) bool {
 // artifact"). For the three feature stages this is exactly
 // validate.Change; for the bug flow's repro/fix, see doc.go's "Bug-flow
 // artifact reuse" — repro always checks proposal.md, and additionally the
-// specs/ delta ONLY when one is present (a promoted bug); fix checks
-// tasks.md's structure only when tasks.md exists at all (spec-lifecycle.md
-// §8: "tasks.md optional" — nothing to validate when it's absent).
+// specs/ delta ONLY when one is present (a promoted bug); fix validates the
+// plan the same way the plan stage does — via validate.Plan, which delegates
+// to milestoned-plan-dag over plan.yaml (change 007, M6 retired tasks.md).
 func validateForStage(dir string, stage Stage) ([]validate.Finding, error) {
 	switch stage {
 	case StageRefine:
@@ -80,7 +100,15 @@ func validateForStage(dir string, stage Stage) ([]validate.Finding, error) {
 		if err != nil {
 			return nil, err
 		}
-		if validate.HasSpecsDeltas(dir) {
+		// A promoted bug additionally validates its specs/ delta, ONLY when
+		// one is present. Change 007 (design D2): the delta is authoritative
+		// YAML, so detection keys on specs/**/spec.yaml (resolveArtifactFiles
+		// over the same glob approve hashes), not the retired markdown spec.md.
+		deltaFiles, err := resolveArtifactFiles(dir, specDeltaGlob)
+		if err != nil {
+			return nil, err
+		}
+		if len(deltaFiles) > 0 {
 			deltaFindings, err := validate.SpecsDeltas(dir)
 			if err != nil {
 				return nil, err
@@ -89,9 +117,6 @@ func validateForStage(dir string, stage Stage) ([]validate.Finding, error) {
 		}
 		return findings, nil
 	case StageFix:
-		if !validate.HasArtifact(dir, "tasks.md") {
-			return nil, nil
-		}
 		return validate.Plan(dir)
 	default:
 		return nil, fmt.Errorf("approve: unrecognized stage %q (want one of %v)", stage, Stages)

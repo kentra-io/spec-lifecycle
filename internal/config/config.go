@@ -29,10 +29,23 @@ const (
 	ConsentOff    = "off"
 )
 
-// ConventionOpenSpec is the only SpecFormat.Convention value v1 defines
-// (spec-lifecycle.md §10); the field is a documentation/conformance
-// anchor, never an installed dependency (implementation-plan.md §0.5).
+// ConventionOpenSpec is the only SpecFormat.Convention value this build
+// defines (spec-lifecycle.md §10). It names the on-disk LAYOUT — the
+// openspec/ directory tree — which is deliberately kept even though the
+// source format is now YAML (renaming openspec/ is tracked separately in
+// issue #6). The field is a documentation/conformance anchor, never an
+// installed dependency (implementation-plan.md §0.5).
 const ConventionOpenSpec = "openspec"
+
+// GrammarYAML is the SpecFormat.Grammar value for the owned native YAML spec
+// format (change 007, design D1/D4): the living spec and every spec delta
+// are hand-authored structured YAML described by the two published JSON
+// Schemas, and markdown is a read-only projection. It replaces the previous
+// OpenSpec markdown grammar pin ("1.5.0") as the seeded default, so the tool
+// operates in YAML mode. Grammar is a free-form documentation anchor (like
+// Convention): validate() does not refuse an unrecognized value, so the
+// former markdown-only posture no longer blocks the YAML format.
+const GrammarYAML = "yaml"
 
 // SourceTracking.Type values this build recognizes (spec-lifecycle.md §10
 // shows "github-issue"; kept open beyond that single value since
@@ -92,9 +105,11 @@ type Config struct {
 	Runtimes     []string `yaml:"runtimes,omitempty"`
 }
 
-// SpecFormat records the on-disk format convention lifecycle conforms to
-// (implementation-plan.md §2.10): NOT an installed runtime dependency —
-// see implementation-plan.md §0.5/"Option B".
+// SpecFormat records the on-disk layout convention and source-format grammar
+// lifecycle conforms to (implementation-plan.md §2.10): NOT an installed
+// runtime dependency — see implementation-plan.md §0.5/"Option B".
+// Convention is the layout name (openspec, kept); Grammar names the source
+// format — GrammarYAML in YAML mode (change 007, design D1/D4).
 type SpecFormat struct {
 	Convention string `yaml:"convention"`
 	Grammar    string `yaml:"grammar"`
@@ -176,9 +191,17 @@ func (c *Config) validate(path string) error {
 		c.SpecFormat.Convention = ConventionOpenSpec
 	} else if c.SpecFormat.Convention != ConventionOpenSpec {
 		return fmt.Errorf(
-			"%s: field %q: must be %q (got %q) — this build only implements the OpenSpec on-disk format",
+			"%s: field %q: must be %q (got %q) — openspec is the kept on-disk layout name (issue #6); the source format itself is YAML (specFormat.grammar)",
 			path, "specFormat.convention", ConventionOpenSpec, c.SpecFormat.Convention,
 		)
+	}
+
+	// Grammar is a free-form documentation anchor, like Convention: the tool
+	// operates in YAML mode (config.Default seeds GrammarYAML) and validate()
+	// deliberately does NOT refuse an unrecognized grammar, so the former
+	// markdown-only posture never blocks the YAML format (change 007).
+	if c.SpecFormat.Grammar == "" {
+		c.SpecFormat.Grammar = GrammarYAML
 	}
 
 	if c.PlanGranularity != "" && !validPlanGranularities[c.PlanGranularity] {
@@ -217,7 +240,7 @@ func (c *Config) validate(path string) error {
 func Default() *Config {
 	return &Config{
 		SchemaVersion:   SchemaVersion,
-		SpecFormat:      SpecFormat{Convention: ConventionOpenSpec, Grammar: "1.5.0"},
+		SpecFormat:      SpecFormat{Convention: ConventionOpenSpec, Grammar: GrammarYAML},
 		ConsentPolicy:   ConsentStrict,
 		PlanGranularity: "medium",
 		SourceTracking:  SourceTracking{Type: SourceTrackingNone},

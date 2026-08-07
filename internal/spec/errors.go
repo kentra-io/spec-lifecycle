@@ -12,22 +12,9 @@ const (
 	// KindMissingRequirementName is a "### Requirement:" header with no
 	// name after the colon.
 	KindMissingRequirementName Kind = "missing_requirement_name"
-	// KindMissingScenarioName is a "#### Scenario:" header with no name
-	// after the colon.
-	KindMissingScenarioName Kind = "missing_scenario_name"
 	// KindDuplicateRequirement is two "### Requirement:" headers with the
 	// same name (case-insensitive) in the same section.
 	KindDuplicateRequirement Kind = "duplicate_requirement"
-	// KindDuplicateScenario is two "#### Scenario:" headers with the same
-	// name (case-insensitive) under the same requirement.
-	KindDuplicateScenario Kind = "duplicate_scenario"
-	// KindDeltaHeaderInLivingSpec is a "## ADDED|MODIFIED|REMOVED|RENAMED
-	// Requirements" header found in a living spec, where only a change's
-	// delta spec.md may have one.
-	KindDeltaHeaderInLivingSpec Kind = "delta_header_in_living_spec"
-	// KindRequirementOutsideSection is a "### Requirement:" header found
-	// outside the "## Requirements" section of a living spec.
-	KindRequirementOutsideSection Kind = "requirement_outside_requirements_section"
 )
 
 // Delta-grammar error kinds.
@@ -35,12 +22,6 @@ const (
 	// KindNoDeltaSections is a delta spec.md with none of the four
 	// recognized H2 sections present at all.
 	KindNoDeltaSections Kind = "no_delta_sections"
-	// KindEmptyDeltaSection is a recognized H2 section present with zero
-	// requirement/rename entries parsed from its body.
-	KindEmptyDeltaSection Kind = "empty_delta_section"
-	// KindDuplicateDeltaSection is the same H2 section title appearing
-	// more than once in one delta spec.md.
-	KindDuplicateDeltaSection Kind = "duplicate_delta_section"
 	// KindMissingRequirementBody is an ADDED/MODIFIED requirement whose
 	// header is followed by no body text at all.
 	KindMissingRequirementBody Kind = "missing_requirement_body"
@@ -53,20 +34,11 @@ const (
 	// KindDanglingRename is a RENAMED FROM with no matching TO (or vice
 	// versa).
 	KindDanglingRename Kind = "dangling_rename"
-	// KindDuplicateRenameFrom is two RENAMED pairs with the same FROM
-	// name.
-	KindDuplicateRenameFrom Kind = "duplicate_rename_from"
-	// KindDuplicateRenameTo is two RENAMED pairs with the same TO name.
-	KindDuplicateRenameTo Kind = "duplicate_rename_to"
-	// KindConflictingOps is a requirement name (or RENAMED pair) claimed
-	// by two conflicting operations in the same delta.
-	KindConflictingOps Kind = "conflicting_delta_ops"
 )
 
-// Fold error kinds — base-spec-aware checks that ParseDelta cannot make on
+// Fold error kinds — base-spec-aware checks the delta parse cannot make on
 // its own (it never sees the living spec it will be applied to). See
-// fold.go's package doc for the divergence-from-oracle table these
-// correspond to.
+// doc.go's refusal table.
 const (
 	// KindFoldRenameSourceMissing is a RENAMED FROM naming a requirement
 	// that does not exist in the capability's current requirement set at
@@ -83,13 +55,12 @@ const (
 	KindFoldRemoveMissing Kind = "fold_remove_missing"
 	// KindFoldModifyMissing is a MODIFIED entry naming a requirement that
 	// does not exist in the capability's current requirement set at the
-	// point MODIFIED is applied (after RENAMED/REMOVED have already run —
-	// matches the oracle's own "not found" archive failure).
+	// point MODIFIED is applied (after RENAMED/REMOVED have already run).
 	KindFoldModifyMissing Kind = "fold_modify_missing"
 	// KindFoldAddExists is an ADDED entry naming a requirement that
 	// already exists in the capability's current requirement set at the
 	// point ADDED is applied (after RENAMED/REMOVED/MODIFIED have already
-	// run — matches the oracle's own "already exists" archive failure).
+	// run).
 	KindFoldAddExists Kind = "fold_add_exists"
 )
 

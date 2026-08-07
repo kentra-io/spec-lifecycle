@@ -21,6 +21,7 @@ import (
 
 	"github.com/kentra-io/spec-lifecycle/internal/config"
 	"github.com/kentra-io/spec-lifecycle/internal/constitution"
+	"github.com/kentra-io/spec-lifecycle/internal/plandag"
 	"github.com/kentra-io/spec-lifecycle/internal/schema"
 )
 
@@ -62,6 +63,12 @@ type InitOptions struct {
 	// resolution (internal/constitution.Locate's override argument) —
 	// tests and a future `--constitution-bin` flag.
 	ConstitutionBinOverride string
+
+	// PlanDAGBinOverride optionally overrides milestoned-plan-dag binary
+	// resolution (internal/plandag.Locate's override argument) — the
+	// injectable path the plan-dag preflight test uses, and the
+	// `--plan-dag-bin` flag (change 007, design D6).
+	PlanDAGBinOverride string
 }
 
 // InitResult reports what a RunInit pass did, for the CLI to print.
@@ -135,6 +142,12 @@ func RunInit(o InitOptions) (InitResult, error) {
 	// fail — the binary is only hard-required later, at gates 2/3's
 	// `lifecycle approve`, exactly like internal/approve's own posture) ---
 	preflightConstitution(o.ConstitutionBinOverride, cfg.Constitution.Version, &res)
+
+	// --- step f': milestoned-plan-dag preflight (presence; warn, never
+	// fail — same posture as the constitution preflight: the binary is only
+	// hard-required later, at the plan gate and the archive step-completion
+	// gate, design D6) ---
+	preflightPlanDAG(o.PlanDAGBinOverride, &res)
 
 	// --- steps g/h: skill fan-out + managed pointer blocks ---
 	items, err := BuildSkillItems(cfg.Runtimes)
@@ -306,6 +319,28 @@ func preflightConstitution(override, pin string, res *InitResult) {
 	}
 	if pf.Warning != "" {
 		res.warn("%s", pf.Warning)
+	}
+}
+
+// preflightPlanDAG resolves the milestoned-plan-dag binary and records a
+// warning (never an error) when it is absent — the same warn-not-fail
+// posture as preflightConstitution. The binary only actually blocks work
+// later, at the plan-stage gate (`lifecycle validate --stage plan`) and the
+// archive step-completion gate (`lifecycle archive`), both of which
+// delegate to it (design D6). `lifecycle init` must always succeed for a
+// repo that hasn't installed the companion primitive yet.
+//
+// No version pin is consulted here (presence is the only prerequisite):
+// nothing in lifecycle.yml pins the plan-dag version yet, so this mirrors
+// the constitution seam's "presence, not version, is the only hard
+// prerequisite when nothing is pinned" stance. A version check is available
+// (plandag.CheckVersion) for a future pin.
+func preflightPlanDAG(override string, res *InitResult) {
+	if _, lerr := plandag.Locate(override); lerr != nil {
+		res.warn(
+			"milestoned-plan-dag binary not found (%s) — the plan-stage gate (`lifecycle validate --stage plan`) and the archive step-completion gate require it; install the milestoned-plan-dag companion primitive",
+			lerr.Error(),
+		)
 	}
 }
 

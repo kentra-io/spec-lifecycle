@@ -16,3 +16,6 @@ coverage.html
 # Editors / OS
 .DS_Store
 *.swp
+
+# Orchestrator run scratch (checkpoints, event journal) — never committed
+.conductor-tmp/

@@ -44,11 +44,11 @@ type Finding struct {
 func ArtifactsForStage(stage Stage) []string {
 	switch stage {
 	case StageRefine:
-		return []string{proposalFile, specsDir + "/**/spec.md"}
+		return []string{proposalFile, specsDir + "/**/spec.yaml"}
 	case StageDesign:
 		return []string{designFile}
 	case StagePlan:
-		return []string{tasksFile}
+		return []string{planFile}
 	default:
 		return nil
 	}

@@ -17,13 +17,17 @@ import (
 // in-process via internal/spec, then diff the rendered result against the
 // live projection, byte for byte.
 //
-// Per capability, folding is done from an empty base (nil *RequirementSet)
+// Per capability, folding is done from an empty base (nil *LivingSpec)
 // through every one of that capability's records IN SEQ ORDER, reading
-// each record's delta straight from the preserved archived file
-// (openspec/changes/archive/<record.Change>/specs/<capability>/spec.md —
-// never from the record's own summary DeltaOps, which is
-// informational/audit only and does not carry full requirement bodies,
-// archive/doc.go). Since a single capability's fold history is
+// each record's delta straight from the preserved archived YAML file
+// (openspec/changes/archive/<record.Change>/specs/<capability>/spec.yaml —
+// the owned YAML source of truth; never from the record's own summary
+// DeltaOps, which is informational/audit only and does not carry full
+// requirement bodies, archive/doc.go). The recomputed living spec is then
+// rendered to its deterministic markdown projection (LivingSpec.RenderProjection)
+// and byte-compared against the live openspec/specs/<capability>/spec.md
+// projection (change 007, Milestone 4 — design D9; constitution ADR-0003,
+// retargeted-but-unchanged). Since a single capability's fold history is
 // self-contained (folding capability A never reads or writes capability
 // B's state), replaying capability-by-capability in each capability's own
 // seq order is equivalent to one global seq-ordered interleaved replay.
@@ -83,23 +87,23 @@ func checkReplay(root string, records []archive.Record) ([]Finding, error) {
 		if byCap[cap][0].PreImageSha != archive.EmptyImageSHA {
 			continue // brownfield origin (see doc above) — not byte-diffable
 		}
-		var current *spec.RequirementSet
+		var current *spec.LivingSpec
 		tainted := false
 		for _, r := range byCap[cap] {
-			deltaPath := filepath.Join(root, "openspec", "changes", "archive", r.Change, "specs", cap, "spec.md")
+			deltaPath := filepath.Join(root, "openspec", "changes", "archive", r.Change, "specs", cap, "spec.yaml")
 			data, err := os.ReadFile(deltaPath)
 			if err != nil {
 				findings = append(findings, replayFinding(cap, r, fmt.Sprintf("could not read archived delta %s: %v", deltaPath, err)))
 				tainted = true
 				break
 			}
-			d, err := spec.ParseDelta(data)
+			d, err := spec.ParseDeltaYAML(data)
 			if err != nil {
 				findings = append(findings, replayFinding(cap, r, fmt.Sprintf("could not parse archived delta %s: %v", deltaPath, err)))
 				tainted = true
 				break
 			}
-			folded, err := spec.Fold(cap, r.Change, current, d)
+			folded, err := spec.FoldYAML(cap, current, d)
 			if err != nil {
 				findings = append(findings, replayFinding(cap, r, fmt.Sprintf("from-empty replay could not fold: %v", err)))
 				tainted = true
@@ -110,7 +114,7 @@ func checkReplay(root string, records []archive.Record) ([]Finding, error) {
 		if tainted || current == nil {
 			continue
 		}
-		rendered[cap] = current.Render()
+		rendered[cap] = current.RenderProjection()
 	}
 
 	for _, cap := range caps {

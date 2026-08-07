@@ -95,13 +95,15 @@ func Plan(dir string) ([]Finding, error) { return validatePlan(dir) }
 // SpecsDeltas exports validateSpecsDeltas — see Proposal's doc comment.
 func SpecsDeltas(dir string) ([]Finding, error) { return validateSpecsDeltas(dir) }
 
-// HasSpecsDeltas reports whether dir/specs contains at least one spec.md
-// delta file — used by internal/approve to decide whether a promoted
-// bug's "repro" gate should also validate a specs/ delta (spec-lifecycle.md
-// §8: "If the repro reveals mis-specced behavior... gate it like a
-// feature refine").
+// HasSpecsDeltas reports whether dir/specs contains at least one spec.yaml
+// delta file (the owned YAML delta source, change 007 M8 — spec.md is a
+// one-way projection, never a delta source) — used by internal/approve to
+// decide whether a promoted bug's "repro" gate should also validate a
+// specs/ delta (spec-lifecycle.md §8: "If the repro reveals mis-specced
+// behavior... gate it like a feature refine"), and by internal/archive to
+// distinguish a feature/spec-changing archive from a delta-less bug.
 func HasSpecsDeltas(dir string) bool {
-	paths, err := findSpecFiles(filepath.Join(dir, specsDir))
+	paths, err := findSpecYAMLFiles(filepath.Join(dir, specsDir))
 	return err == nil && len(paths) > 0
 }
 

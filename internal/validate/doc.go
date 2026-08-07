@@ -13,10 +13,9 @@
 //   - design.md: an explicit NFR-discharge section ("## NFR Discharge",
 //     case/hyphen-insensitive) is present (spec-lifecycle.md §4's design
 //     row, §4.1's NFR routing rule, §7's ADR-proposal seam).
-//   - tasks.md: every "## Milestone <n>: <name>" block carries the four
-//     fixed labels **Goal** / **Deliverables** / **Validation contract** /
-//     **Steps**, and Validation contract has at least one non-blank line
-//     under it (spec-lifecycle.md §4.2, verbatim).
+//   - plan.yaml: delegated wholesale to `milestoned-plan-dag validate`,
+//     which owns the plan schema (change 007, design D6); this package
+//     surfaces that report and adds no plan grammar of its own.
 //
 // # Stage -> artifact mapping
 //

@@ -46,8 +46,30 @@ import (
 // 4 — "the format-compatible schema is kentra-branded").
 const Name = "kentra-spec-lifecycle"
 
-//go:embed schema.yaml templates/*.md
+// Published JSON Schemas describing the owned YAML spec format (change 007,
+// design D4). These names are also the descriptor-relative install paths:
+// `lifecycle init` fans them out to
+// openspec/schemas/kentra-spec-lifecycle/<name> alongside schema.yaml, and
+// they are published so external tools can validate the YAML. The embedded
+// bytes are also the in-process validator's schema source (see
+// internal/spec.ValidateYAML) — one source of truth, no runtime dependency
+// (constitution ADR-0004).
+const (
+	LivingSpecSchemaName = "living-spec.schema.json"
+	SpecDeltaSchemaName  = "spec-delta.schema.json"
+)
+
+//go:embed schema.yaml templates/*.md living-spec.schema.json spec-delta.schema.json
 var assets embed.FS
+
+// PublishedSchema returns the embedded bytes of a published JSON Schema by
+// its descriptor-relative name (LivingSpecSchemaName or SpecDeltaSchemaName).
+// Callers that need the compiled schema use internal/spec's schema loaders,
+// which read these bytes — the embedded file is the single source of truth
+// for both the published, installed copy and the in-process validator.
+func PublishedSchema(name string) ([]byte, error) {
+	return assets.ReadFile(name)
+}
 
 // relPaths returns every embedded asset's path relative to the descriptor
 // root (e.g. "schema.yaml", "templates/proposal.md"), sorted for

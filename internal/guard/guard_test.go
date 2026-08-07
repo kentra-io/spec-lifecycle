@@ -26,7 +26,7 @@ import (
 type fixtureBuilder struct {
 	t       *testing.T
 	root    string
-	current map[string]*spec.RequirementSet // per capability, nil until first ADD
+	current map[string]*spec.LivingSpec // per capability, nil until first ADD
 	seq     int
 }
 
@@ -43,37 +43,47 @@ func newFixtureBuilder(t *testing.T) *fixtureBuilder {
 	if err := os.MkdirAll(filepath.Join(root, "openspec"), 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	return &fixtureBuilder{t: t, root: root, current: map[string]*spec.RequirementSet{}}
+	return &fixtureBuilder{t: t, root: root, current: map[string]*spec.LivingSpec{}}
 }
+
+// The *DeltaText helpers now emit the owned YAML spec-delta grammar
+// (Delta: op-tagged entries, requirement/scenario sub-shape) — the
+// authoritative archived-delta shape guard's from-empty replay reads after the
+// change-007 Milestone-4 retarget (spec.ParseDeltaYAML/FoldYAML/RenderProjection).
+// They are capability-agnostic (the capability is passed to step separately and
+// FoldYAML takes it as an argument), so the YAML omits the optional capability
+// key, exactly as the markdown helpers omitted it.
 
 func addDeltaText(name string) string {
 	return fmt.Sprintf(
-		"## ADDED Requirements\n### Requirement: %s\nThe system SHALL do %s work.\n\n#### Scenario: %s happens\n- **GIVEN** a precondition\n- **WHEN** the action happens\n- **THEN** the system SHALL respond\n",
+		"deltas:\n  - op: ADDED\n    requirement:\n      name: %s\n      text: The system SHALL do %s work.\n      scenarios:\n        - name: %s happens\n          given:\n            - a precondition\n          when:\n            - the action happens\n          then:\n            - the system SHALL respond\n",
 		name, name, name,
 	)
 }
 
 func modifyDeltaText(name, suffix string) string {
 	return fmt.Sprintf(
-		"## MODIFIED Requirements\n### Requirement: %s\nThe system SHALL do %s work%s.\n\n#### Scenario: %s happens\n- **GIVEN** a precondition\n- **WHEN** the action happens\n- **THEN** the system SHALL respond\n",
+		"deltas:\n  - op: MODIFIED\n    requirement:\n      name: %s\n      text: The system SHALL do %s work%s.\n      scenarios:\n        - name: %s happens\n          given:\n            - a precondition\n          when:\n            - the action happens\n          then:\n            - the system SHALL respond\n",
 		name, name, suffix, name,
 	)
 }
 
 func removeDeltaText(name string) string {
-	return fmt.Sprintf("## REMOVED Requirements\n### Requirement: %s\n", name)
+	return fmt.Sprintf("deltas:\n  - op: REMOVED\n    requirement:\n      name: %s\n", name)
 }
 
 func renameDeltaText(from, to string) string {
-	return fmt.Sprintf("## RENAMED Requirements\n- FROM: `### Requirement: %s`\n- TO: `### Requirement: %s`\n", from, to)
+	return fmt.Sprintf("deltas:\n  - op: RENAMED\n    from: %s\n    to: %s\n", from, to)
 }
 
 // step performs one archive-equivalent operation for capability:
-// writes the archived change folder (with deltaText verbatim), folds it
-// (via internal/spec, exactly like internal/archive does) to produce the
-// new live spec.md, appends one ledger record (via
-// archive.AppendRecords, so seq/JSON-shape match production), and writes
-// the new live spec.md. Returns the change name used.
+// writes the archived change folder's YAML delta (spec.yaml, deltaText
+// verbatim), folds it over the capability's current living spec via the YAML
+// engine (spec.ParseDeltaYAML/FoldYAML — the same path guard's from-empty
+// replay reads after the Milestone-4 retarget) to produce the new live spec.md
+// deterministic projection (LivingSpec.RenderProjection), appends one ledger
+// record (via archive.AppendRecords, so seq/JSON-shape match production), and
+// writes the new live spec.md projection. Returns the change name used.
 func (b *fixtureBuilder) step(capability, deltaText string) string {
 	b.t.Helper()
 	b.seq++
@@ -83,27 +93,27 @@ func (b *fixtureBuilder) step(capability, deltaText string) string {
 	if err := os.MkdirAll(changeDir, 0o755); err != nil {
 		b.t.Fatalf("MkdirAll: %v", err)
 	}
-	deltaPath := filepath.Join(changeDir, "spec.md")
+	deltaPath := filepath.Join(changeDir, "spec.yaml")
 	if err := os.WriteFile(deltaPath, []byte(deltaText), 0o644); err != nil {
 		b.t.Fatalf("WriteFile: %v", err)
 	}
 
-	d, err := spec.ParseDelta([]byte(deltaText))
+	d, err := spec.ParseDeltaYAML([]byte(deltaText))
 	if err != nil {
-		b.t.Fatalf("ParseDelta: %v", err)
+		b.t.Fatalf("ParseDeltaYAML: %v", err)
 	}
 
 	before := b.current[capability]
 	preImage := archive.EmptyImageSHA
 	if before != nil {
-		preImage = archive.HashBytes(before.Render())
+		preImage = archive.HashBytes(before.RenderProjection())
 	}
 
-	folded, err := spec.Fold(capability, change, before, d)
+	folded, err := spec.FoldYAML(capability, before, d)
 	if err != nil {
-		b.t.Fatalf("Fold: %v", err)
+		b.t.Fatalf("FoldYAML: %v", err)
 	}
-	rendered := folded.Render()
+	rendered := folded.RenderProjection()
 	postImage := archive.HashBytes(rendered)
 	b.current[capability] = folded
 
@@ -134,28 +144,27 @@ func (b *fixtureBuilder) step(capability, deltaText string) string {
 	return change
 }
 
-// seedBrownfield writes capability's live spec.md directly, bypassing step
-// entirely — simulating a capability that existed on disk BEFORE
-// lifecycle ever archived anything for it (replay.go/chain.go's
-// "brownfield capability" case; mirrors cmd/lifecycle's own
-// archive_conformance_case02/archive_conflict fixtures, which pre-seed
-// openspec/specs/auth/spec.md the same way). Subsequent step calls for
-// capability will compute correct preImageSha against this seeded content, exactly
-// as internal/archive's own Archive does against a pre-existing file.
-func (b *fixtureBuilder) seedBrownfield(capability, content string) {
+// seedBrownfield seeds capability's living spec from a structured LivingSpec
+// and writes its deterministic markdown projection (RenderProjection) as the
+// live spec.md directly, bypassing step entirely — simulating a capability that
+// existed on disk BEFORE lifecycle ever archived anything for it
+// (replay.go/chain.go's "brownfield capability" case; mirrors cmd/lifecycle's
+// own archive_conformance_case02/archive_conflict fixtures, which pre-seed
+// openspec/specs/auth/spec.md the same way). Because the seeded projection is
+// exactly RenderProjection(base), subsequent step calls compute a correct
+// (non-empty) preImageSha against it — the > EmptyImageSHA first-record hash
+// that marks the capability brownfield and exempts it from replay's byte-diff,
+// exactly as internal/archive's own Archive does against a pre-existing file.
+func (b *fixtureBuilder) seedBrownfield(capability string, base *spec.LivingSpec) {
 	b.t.Helper()
-	rs, err := spec.ParseRequirementSet([]byte(content))
-	if err != nil {
-		b.t.Fatalf("ParseRequirementSet: %v", err)
-	}
 	specDir := filepath.Join(b.root, "openspec", "specs", capability)
 	if err := os.MkdirAll(specDir, 0o755); err != nil {
 		b.t.Fatalf("MkdirAll: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(specDir, "spec.md"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(specDir, "spec.md"), base.RenderProjection(), 0o644); err != nil {
 		b.t.Fatalf("WriteFile: %v", err)
 	}
-	b.current[capability] = rs
+	b.current[capability] = base
 }
 
 // --- tests -----------------------------------------------------------------
@@ -209,13 +218,20 @@ func TestRun_CleanMultiChangeMultiCapability(t *testing.T) {
 
 func TestRun_CleanBrownfieldCapability(t *testing.T) {
 	b := newFixtureBuilder(t)
-	b.seedBrownfield("auth", "# auth Specification\n\n"+
-		"## Purpose\nAuthentication.\n\n"+
-		"## Requirements\n"+
-		"### Requirement: Password login\n"+
-		"The system SHALL allow login.\n\n"+
-		"#### Scenario: Successful login\n"+
-		"- **GIVEN** a user\n- **WHEN** they log in\n- **THEN** the system SHALL grant a session\n")
+	b.seedBrownfield("auth", &spec.LivingSpec{
+		Capability: "auth",
+		Purpose:    "Authentication.",
+		Requirements: []spec.Requirement{{
+			Name: "Password login",
+			Text: "The system SHALL allow login.",
+			Scenarios: []spec.Scenario{{
+				Name:  "Successful login",
+				Given: []string{"a user"},
+				When:  []string{"they log in"},
+				Then:  []string{"the system SHALL grant a session"},
+			}},
+		}},
+	})
 
 	b.step("auth", modifyDeltaText("Password login", " (v2)"))
 	b.step("auth", addDeltaText("Session expiry"))
@@ -267,7 +283,7 @@ func TestRun_ArchiveMutated_EditedArchivedDelta(t *testing.T) {
 	b := newFixtureBuilder(t)
 	change := b.step("auth", addDeltaText("Password login"))
 
-	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.md")
+	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.yaml")
 	data, err := os.ReadFile(deltaPath)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
@@ -303,7 +319,7 @@ func TestRun_ArchiveMutated_OrphanArchiveNoLedgerRecord(t *testing.T) {
 	if err := os.MkdirAll(orphanDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(orphanDir, "spec.md"), []byte(addDeltaText("Orphan requirement")), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(orphanDir, "spec.yaml"), []byte(addDeltaText("Orphan requirement")), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 

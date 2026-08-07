@@ -5,14 +5,14 @@
 env HOME=/no-home
 
 exec lifecycle approve --stage refine 042-user-auth
-exec lifecycle status --change 042-user-auth --format json
+exec lifecycle status --change 042-user-auth --format yaml
 ! stdout 'drifted'
 
 mv edited-proposal.md openspec/changes/042-user-auth/proposal.md
 
-exec lifecycle status --change 042-user-auth --format json
-stdout '"stage": "refine"'
-stdout '"drifted"'
+exec lifecycle status --change 042-user-auth --format yaml
+stdout 'stage: refine'
+stdout 'drifted:'
 stdout 'proposal.md'
 
 -- lifecycle.yml --
@@ -36,16 +36,22 @@ Users need to authenticate.
 ## Impact
 - New capability: auth.
 
--- openspec/changes/042-user-auth/specs/auth/spec.md --
-## ADDED Requirements
-
-### Requirement: Password login
-The system SHALL allow a registered user to authenticate with a username and password.
-
-#### Scenario: Successful login
-- **GIVEN** a registered user
-- **WHEN** they submit correct credentials
-- **THEN** the system SHALL grant a session
+-- openspec/changes/042-user-auth/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: ADDED
+    requirement:
+      name: 'Password login'
+      text: |
+        The system SHALL allow a registered user to authenticate with a username and password.
+      scenarios:
+        - name: 'Successful login'
+          given:
+            - 'a registered user'
+          when:
+            - 'they submit correct credentials'
+          then:
+            - 'the system SHALL grant a session'
 
 -- edited-proposal.md --
 ---

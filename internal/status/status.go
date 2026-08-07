@@ -20,24 +20,24 @@ const (
 
 // GateStatus is one stage's derived state within a ChangeStatus.
 type GateStatus struct {
-	Stage         approve.Stage `json:"stage"`
-	State         StageState    `json:"state"`
-	DesignSkipped bool          `json:"designSkipped,omitempty"`
-	ApprovedBy    string        `json:"approvedBy,omitempty"`
-	ApprovedAt    string        `json:"approvedAt,omitempty"`
-	Notes         string        `json:"notes,omitempty"`
+	Stage         approve.Stage `json:"stage" yaml:"stage"`
+	State         StageState    `json:"state" yaml:"state"`
+	DesignSkipped bool          `json:"designSkipped,omitempty" yaml:"designSkipped,omitempty"`
+	ApprovedBy    string        `json:"approvedBy,omitempty" yaml:"approvedBy,omitempty"`
+	ApprovedAt    string        `json:"approvedAt,omitempty" yaml:"approvedAt,omitempty"`
+	Notes         string        `json:"notes,omitempty" yaml:"notes,omitempty"`
 	// Drifted lists artifact paths (relative to the change folder) whose
 	// recorded hash no longer matches current content. Only populated for
 	// an approved gate; nil means no drift (or the gate isn't approved).
-	Drifted []string `json:"drifted,omitempty"`
+	Drifted []string `json:"drifted,omitempty" yaml:"drifted,omitempty"`
 }
 
 // ChangeStatus is one change folder's full gate-state report.
 type ChangeStatus struct {
-	Change string       `json:"change"`
-	Type   string       `json:"type"`
-	Issue  string       `json:"issue"`
-	Gates  []GateStatus `json:"gates"`
+	Change string       `json:"change" yaml:"change"`
+	Type   string       `json:"type" yaml:"type"`
+	Issue  string       `json:"issue" yaml:"issue"`
+	Gates  []GateStatus `json:"gates" yaml:"gates"`
 }
 
 // stageOrder is the canonical global ordering used both for a

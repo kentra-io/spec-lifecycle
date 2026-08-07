@@ -7,18 +7,18 @@
 // §3.1): once archived, the change folder moves under changes/archive/ and
 // is thereafter append-only (guard-checked in M5).
 //
-// # Tasks-completion gate (harness orchestration.md §5.5)
+// # Step-completion gate (design D6)
 //
 // Immediately after step 1's gate-check, a second, independent check
-// (tasks_gate.go) refuses the archive if tasks.md declares any
-// checkbox-tracked Steps item ("<n>. [ ]"/"<n>. [x]",
-// internal/validate's opt-in addendum to spec-lifecycle.md §4.2) that
-// is not checked. Same override posture as the other two gates:
+// (tasks_gate.go) refuses the archive if the change's plan reports any
+// milestone not done. Milestone done-states are read from
+// `milestoned-plan-dag resolve <change>/plan.yaml` — a CLI/YAML process
+// boundary, no Go import (design D6) — replacing the previous tasks.md
+// checkbox parse. Same override posture as the other two gates:
 // --force-incomplete-tasks bypasses it, recorded (never silently) via
-// Result/Record.TasksIncompleteOverridden. A change with no tasks.md, or
-// whose Steps carry no checkboxes at all, is never gated by this check —
-// see tasks_gate.go's doc comment for why that is the deliberately
-// backward-compatible default.
+// Result/Record.TasksIncompleteOverridden. A change with no plan.yaml is
+// never gated by this check — see tasks_gate.go's doc comment for why that
+// is the deliberately backward-compatible default.
 //
 // # Gate-check reuse (not a second stage-set implementation)
 //
@@ -63,7 +63,8 @@
 // # Conflict-check ("detection by construction")
 //
 // Step 2 parses every OTHER live change folder's capability deltas
-// (internal/spec.ParseDelta — the same parser as everywhere else) and
+// (internal/spec.ParseDeltaYAML over the owned spec.yaml source — the same
+// parser as everywhere else) and
 // compares each capability's set of MODIFIED/REMOVED/RENAMED(from)
 // requirement names, case-insensitively, against this change's own set for
 // that capability (spec-lifecycle.md §6.2/§6.5). ADDED names are not
@@ -114,15 +115,15 @@
 //
 // # Pre-image sentinel for a brand-new capability
 //
-// spec-lifecycle.md §6.1's Fold already has an explicit "capability does
-// not exist yet" branch (base == nil, synthesizing the oracle's new-capability
-// skeleton). This package's reading of "documented sentinel" for that
+// spec-lifecycle.md §6.1's FoldYAML already has an explicit "capability does
+// not exist yet" branch (base == nil, synthesizing a structured empty
+// living spec). This package's reading of "documented sentinel" for that
 // case's pre-image (implementation-plan.md's task description, step c):
 // the sha256 of the EMPTY byte string ("sha256:e3b0c...855", computed
-// once via hashBytes(nil), never hand-typed) — the same value already
-// visible in testdata/conformance/manifest.json for a 0-byte fixture file,
-// so it is a value this codebase already treats as "the hash of nothing"
-// elsewhere, not a new invented constant.
+// once via hashBytes(nil), never hand-typed) — the canonical "hash of
+// nothing", shared with internal/guard as archive.EmptyImageSHA so the two
+// packages can never define the sentinel two different ways, not a new
+// invented constant.
 //
 // # Bug (delta-less) archive: one record, no capability
 //
@@ -142,7 +143,8 @@
 // # Writing the folded specs: prepare, then commit, as one group
 //
 // A multi-capability change folds N capabilities, and every one of their
-// openspec/specs/<cap>/spec.md writes happens before the change-folder
+// live writes — the owned spec.yaml source AND its deterministic spec.md
+// projection — happens before the change-folder
 // rename (the commit point below). Doing this as N independent
 // atomicwrite.WriteFile calls would mean a failure partway through (e.g.
 // capability 2 of 3 fails to flush) leaves capability 1's live spec

@@ -21,11 +21,11 @@ minimal artifact set built around one rule: **reproduce before you fix.**
 - **No spec delta by default.** A bug is, by definition, a failure to meet
   behavior the spec already describes — fixing it changes no contract. **If
   the repro reveals the behavior was never correctly specced**, this is
-  spec-affecting: add a `specs/<capability>/spec.md` delta and gate it
+  spec-affecting: add a `specs/<capability>/spec.yaml` delta and gate it
   exactly like a feature refine (run `/lifecycle-refine`'s validate/approve
   steps for that delta, folded into this same change).
-- `design` is skipped by default. `tasks.md` is optional and, when used,
-  is usually a single milestone whose Validation contract is the repro
+- `design` is skipped by default. A `plan.yaml` is optional and, when
+  used, is usually a single milestone whose contract check is the repro
   test passing.
 
 ## Promotion hatch
@@ -33,8 +33,9 @@ minimal artifact set built around one rule: **reproduce before you fix.**
 If the fix turns out to span architecture, or would need a constitutional
 deviation, **promote** this change into the full feature flow instead of
 forcing it through the minimal profile: insert `design` and `plan` stages
-into the same folder and hand off to `/lifecycle-design` then
-`/lifecycle-plan`. A promoted bug's gate records may mix `repro`/`fix` with
+into the same folder and hand off to `/lifecycle-design`, then author the
+plan stage's `plan.yaml` with `milestoned-plan-dag`'s `/plan-author`
+skill. A promoted bug's gate records may mix `repro`/`fix` with
 `design`/`plan` in the same `approval-state.json` — that is expected;
 `lifecycle status`/`guard`/`archive` key their gate-checks off the change
 *type* recorded at intake, not a fixed stage list.

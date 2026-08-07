@@ -24,23 +24,24 @@ there is no `openspec archive` to shell out to (spec-lifecycle.md §6.2).
    lifecycle archive <change>
    ```
    This gate-checks (refusing on any un-approved required stage), runs the
-   tasks-completion gate (refusing if `tasks.md` declares any
-   `[ ]`/`[x]`-tracked Steps item that is not checked — harness
-   orchestration.md §5.5; a `tasks.md` with no tracked steps at all, or no
-   `tasks.md`, is never gated by this), conflict-checks (refusing loudly
+   step-completion gate (refusing if the change's `plan.yaml` has any
+   milestone that `milestoned-plan-dag resolve` reports not done — a
+   change with no `plan.yaml` at all is never gated by this; the escape
+   hatch is `--force-incomplete-tasks`), conflict-checks (refusing loudly
    if another in-flight change's delta touches a requirement —
    `MODIFIED`/`REMOVED`/`RENAMED` — that this change also touches; never a
-   silent drop), records pre-image digests, folds the delta into
-   `openspec/specs/<capability>/spec.md` (a delta-less bug change skips
-   the fold), relocates the folder to `openspec/changes/archive/<change>/`,
+   silent drop), records pre-image digests, folds the YAML delta into the
+   living `openspec/specs/<capability>/spec.yaml` and regenerates its
+   read-only `spec.md` projection (a delta-less bug change skips the
+   fold), relocates the folder to `openspec/changes/archive/<change>/`,
    records post-image digests, appends the ledger record(s) with the next
    monotonic `seq`, and then runs the full `lifecycle guard` as a
    post-archive self-check.
 3. **Interpret the exit code:**
    - `0` — archived cleanly and the post-archive guard self-check passed.
      Tell the human it archived; nothing further to do.
-   - `1` — refused: an un-approved required gate, an unchecked tracked
-     step in `tasks.md`, a genuine cross-change conflict, or a fold
+   - `1` — refused: an un-approved required gate, a not-done plan
+     milestone, a genuine cross-change conflict, or a fold
      failure. Nothing was written. Go fix the underlying gate/incomplete
      step/conflict and retry.
    - `2` — either could not run at all (bad flags, no `openspec/` tree,

@@ -37,13 +37,19 @@ Small, local, architecturally inert.
 ## Impact
 - auth only.
 
--- openspec/changes/042-user-auth/specs/auth/spec.md --
-## MODIFIED Requirements
-
-### Requirement: Session timeout
-The system SHALL expire an idle session after 30 minutes.
-
-#### Scenario: Idle expiry
-- **GIVEN** an authenticated session
-- **WHEN** it is idle for 30 minutes
-- **THEN** the system SHALL expire it
+-- openspec/changes/042-user-auth/specs/auth/spec.yaml --
+capability: auth
+deltas:
+  - op: MODIFIED
+    requirement:
+      name: 'Session timeout'
+      text: |
+        The system SHALL expire an idle session after 30 minutes.
+      scenarios:
+        - name: 'Idle expiry'
+          given:
+            - 'an authenticated session'
+          when:
+            - 'it is idle for 30 minutes'
+          then:
+            - 'the system SHALL expire it'

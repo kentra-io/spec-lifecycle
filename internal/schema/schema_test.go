@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +23,8 @@ func TestInstallWritesExpectedTree(t *testing.T) {
 		"templates/proposal.md",
 		"templates/spec.md",
 		"templates/design.md",
-		"templates/tasks.md",
+		"living-spec.schema.json",
+		"spec-delta.schema.json",
 	}
 	for _, rel := range wantFiles {
 		path := filepath.Join(root, filepath.FromSlash(rel))
@@ -118,8 +120,8 @@ func TestVerifyReportsMissingDescriptorEntirely(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if len(mismatches) != 5 { // schema.yaml + 4 templates
-		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 5", len(mismatches))
+	if len(mismatches) != 6 { // schema.yaml + 3 templates + 2 published JSON Schemas
+		t.Fatalf("Verify on an uninstalled dir found %d mismatches, want 6", len(mismatches))
 	}
 	for _, m := range mismatches {
 		if m.Reason != "missing" {
@@ -184,6 +186,32 @@ func TestVerifyPropagatesNonNotExistReadError(t *testing.T) {
 	}
 }
 
+// TestPublishedSchemasAreWellFormed guards the two published JSON Schemas
+// (change 007, design D4): each must be present under PublishedSchema and
+// parse as JSON carrying the $id the delta schema's cross-file $ref and the
+// in-process validator both resolve against.
+func TestPublishedSchemasAreWellFormed(t *testing.T) {
+	for _, name := range []string{LivingSpecSchemaName, SpecDeltaSchemaName} {
+		data, err := PublishedSchema(name)
+		if err != nil {
+			t.Fatalf("PublishedSchema(%q): %v", name, err)
+		}
+		var doc struct {
+			Schema string `json:"$schema"`
+			ID     string `json:"$id"`
+		}
+		if err := json.Unmarshal(data, &doc); err != nil {
+			t.Fatalf("%s is not valid JSON: %v", name, err)
+		}
+		if doc.Schema != "https://json-schema.org/draft/2020-12/schema" {
+			t.Errorf("%s $schema = %q, want draft 2020-12", name, doc.Schema)
+		}
+		if doc.ID == "" {
+			t.Errorf("%s is missing an $id (needed for $ref resolution)", name)
+		}
+	}
+}
+
 func TestMismatchString(t *testing.T) {
 	m := Mismatch{Rel: "templates/tasks.md", Reason: "modified"}
 	if got, want := m.String(), "templates/tasks.md: modified"; got != want {
@@ -209,7 +237,9 @@ func TestSchemaYAMLIsWellFormed(t *testing.T) {
 			Template  string   `yaml:"template"`
 			Requires  []string `yaml:"requires"`
 		} `yaml:"artifacts"`
-		Apply struct {
+		// change 007 M6 retired the top-level apply: block; it must be
+		// absent now (the machine plan surface is milestoned-plan-dag).
+		Apply *struct {
 			Requires []string `yaml:"requires"`
 			Tracks   string   `yaml:"tracks"`
 		} `yaml:"apply"`
@@ -220,16 +250,16 @@ func TestSchemaYAMLIsWellFormed(t *testing.T) {
 	if doc.Name != Name {
 		t.Errorf("schema.yaml name = %q, want %q", doc.Name, Name)
 	}
-	if len(doc.Artifacts) != 4 {
-		t.Fatalf("schema.yaml has %d artifacts, want 4 (proposal, specs, design, tasks)", len(doc.Artifacts))
+	if len(doc.Artifacts) != 3 {
+		t.Fatalf("schema.yaml has %d artifacts, want 3 (proposal, specs, design)", len(doc.Artifacts))
 	}
-	wantIDs := []string{"proposal", "specs", "design", "tasks"}
+	wantIDs := []string{"proposal", "specs", "design"}
 	for i, id := range wantIDs {
 		if doc.Artifacts[i].ID != id {
 			t.Errorf("artifact[%d].id = %q, want %q", i, doc.Artifacts[i].ID, id)
 		}
 	}
-	if doc.Apply.Tracks != "tasks.md" {
-		t.Errorf("apply.tracks = %q, want %q", doc.Apply.Tracks, "tasks.md")
+	if doc.Apply != nil {
+		t.Errorf("schema.yaml still declares an apply: block (%+v); change 007 M6 retired it", *doc.Apply)
 	}
 }

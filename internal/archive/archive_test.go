@@ -3,6 +3,7 @@ package archive
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -67,14 +68,49 @@ type: bug
 # Fix panic on empty input
 `
 
-func addedRequirement(name, body, scenario string) string {
-	return "## ADDED Requirements\n\n### Requirement: " + name + "\n" + body +
-		"\n\n#### Scenario: " + scenario + "\n- **GIVEN** a precondition\n- **WHEN** an action\n- **THEN** the system SHALL respond\n"
+// deltaYAML wraps one op entry into a full spec.yaml delta document for the
+// given capability. The requirement/scenario sub-shape mirrors the owned
+// YAML model (internal/spec types), replacing the markdown ## ADDED grammar.
+func deltaYAML(capability, entry string) string {
+	return "capability: " + capability + "\ndeltas:\n" + entry
 }
 
+// addedRequirement renders one ADDED delta entry (YAML) with a single
+// scenario carrying a GIVEN/WHEN/THEN clause each.
+func addedRequirement(name, body, scenario string) string {
+	return opRequirementEntry("ADDED", name, body, scenario)
+}
+
+// modifiedRequirement renders one MODIFIED delta entry (YAML).
 func modifiedRequirement(name, body, scenario string) string {
-	return "## MODIFIED Requirements\n\n### Requirement: " + name + "\n" + body +
-		"\n\n#### Scenario: " + scenario + "\n- **GIVEN** a precondition\n- **WHEN** an action\n- **THEN** the system SHALL respond\n"
+	return opRequirementEntry("MODIFIED", name, body, scenario)
+}
+
+func opRequirementEntry(op, name, body, scenario string) string {
+	return "  - op: " + op + "\n" +
+		"    requirement:\n" +
+		"      name: " + fmt.Sprintf("%q", name) + "\n" +
+		"      text: " + fmt.Sprintf("%q", body) + "\n" +
+		"      scenarios:\n" +
+		"        - name: " + fmt.Sprintf("%q", scenario) + "\n" +
+		"          given: ['a precondition']\n" +
+		"          when: ['an action']\n" +
+		"          then: ['the system SHALL respond']\n"
+}
+
+// livingSpecYAML renders a minimal living-spec source (spec.yaml) with a
+// single requirement — used to seed a base capability a change folds onto.
+func livingSpecYAML(capability, purpose, reqName, body, scenario string) string {
+	return "capability: " + capability + "\n" +
+		"purpose: " + fmt.Sprintf("%q", purpose) + "\n" +
+		"requirements:\n" +
+		"  - name: " + fmt.Sprintf("%q", reqName) + "\n" +
+		"    text: " + fmt.Sprintf("%q", body) + "\n" +
+		"    scenarios:\n" +
+		"      - name: " + fmt.Sprintf("%q", scenario) + "\n" +
+		"        given: ['a user']\n" +
+		"        when: ['they act']\n" +
+		"        then: ['the system SHALL respond']\n"
 }
 
 // newFeatureChange scaffolds a minimal feature change folder under a
@@ -83,8 +119,8 @@ func newFeatureChange(t *testing.T, root, name, capability, reqName string) stri
 	t.Helper()
 	changeDir := filepath.Join(root, "openspec", "changes", name)
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", capability, "spec.md"),
-		addedRequirement(reqName, "The system SHALL "+reqName+".", "Successful "+reqName))
+	writeFile(t, filepath.Join(changeDir, "specs", capability, "spec.yaml"),
+		deltaYAML(capability, addedRequirement(reqName, "The system SHALL "+reqName+".", "Successful "+reqName)))
 	return changeDir
 }
 
@@ -249,40 +285,29 @@ func TestArchiveBugDeltaless(t *testing.T) {
 	}
 }
 
-// --- tasks-completion gate ---
+// --- step-completion gate (milestoned-plan-dag resolve, change 007 M5) ---
 
-const tasksWithUncheckedStep = `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. [x] write the handler
-  2. [ ] write the tests
-`
+// resolveMilestone renders one `milestoned-plan-dag resolve` milestone
+// entry in the YAML shape internal/plandag.Resolve reads.
+func resolveMilestone(id int, title string, done bool) string {
+	return fmt.Sprintf("  - id: %d\n    title: %q\n    done: %t\n", id, title, done)
+}
 
-const tasksAllChecked = `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. [x] write the handler
-  2. [x] write the tests
-`
-
-func TestArchiveRefusesOnIncompleteTasks(t *testing.T) {
+func TestArchiveRefusesOnOutstandingMilestone(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+
+		resolveMilestone(1, "Password login", true)+
+		resolveMilestone(2, "Session handling", false))
 
 	_, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if !errors.Is(err, ErrTasksIncomplete) {
 		t.Fatalf("err = %v, want ErrTasksIncomplete", err)
 	}
-	if !contains(err.Error(), "write the tests") {
-		t.Errorf("error message %q should name the unchecked step", err.Error())
+	if !contains(err.Error(), "Session handling") {
+		t.Errorf("error message %q should name the outstanding milestone", err.Error())
 	}
 
 	// Nothing should have moved or been written.
@@ -297,8 +322,9 @@ func TestArchiveRefusesOnIncompleteTasks(t *testing.T) {
 func TestArchiveForceIncompleteTasksOverride(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksWithUncheckedStep)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+resolveMilestone(1, "Password login", false))
 
 	res, err := Archive(Request{Root: root, Change: "001-add-login", ForceIncompleteTasks: true})
 	if err != nil {
@@ -312,11 +338,14 @@ func TestArchiveForceIncompleteTasksOverride(t *testing.T) {
 	}
 }
 
-func TestArchiveAllowsAllStepsChecked(t *testing.T) {
+func TestArchiveAllowsAllMilestonesDone(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), tasksAllChecked)
+	writeFile(t, filepath.Join(changeDir, "plan.yaml"), "milestones: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
+	fakeResolveBin(t, "milestones:\n"+
+		resolveMilestone(1, "Password login", true)+
+		resolveMilestone(2, "Session handling", true))
 
 	res, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if err != nil {
@@ -327,37 +356,16 @@ func TestArchiveAllowsAllStepsChecked(t *testing.T) {
 	}
 }
 
-func TestArchiveAllowsNoTasksFile(t *testing.T) {
-	// No tasks.md at all — the gate must stay a no-op (backward
-	// compatible with every change that predates checkbox tracking).
+func TestArchiveAllowsNoPlanFile(t *testing.T) {
+	// No plan.yaml at all — the gate must stay a no-op (backward
+	// compatible with every change that predates the plan-dag integration).
 	root := newProjectRoot(t)
 	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	_, err := Archive(Request{Root: root, Change: "001-add-login"})
 	if err != nil {
-		t.Fatalf("Archive: %v (tasks-completion gate must not block a change with no tasks.md)", err)
-	}
-}
-
-func TestArchiveAllowsUntrackedSteps(t *testing.T) {
-	// Legacy-style Steps (no checkboxes at all) must not be gated either.
-	root := newProjectRoot(t)
-	changeDir := newFeatureChange(t, root, "001-add-login", "auth", "Password login")
-	writeFile(t, filepath.Join(changeDir, "tasks.md"), `## Milestone 1: Password login
-**Goal** — implement login.
-**Deliverables** — login handler.
-**Validation contract** — checkable:
-  - go test ./... passes
-**Steps** — s:
-  1. write the handler
-  2. write the tests
-`)
-	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
-
-	_, err := Archive(Request{Root: root, Change: "001-add-login"})
-	if err != nil {
-		t.Fatalf("Archive: %v (untracked Steps must not be gated)", err)
+		t.Fatalf("Archive: %v (step-completion gate must not block a change with no plan.yaml)", err)
 	}
 }
 
@@ -367,31 +375,19 @@ func TestArchiveConflictRefusesThenForceOverrideResolves(t *testing.T) {
 	root := newProjectRoot(t)
 
 	// Seed a base capability spec both changes will MODIFY.
-	writeFile(t, filepath.Join(root, "openspec", "specs", "auth", "spec.md"), `# auth Specification
-
-## Purpose
-Authentication.
-
-## Requirements
-### Requirement: Password login
-The system SHALL allow login.
-
-#### Scenario: Successful login
-- **GIVEN** a user
-- **WHEN** they log in
-- **THEN** the system SHALL grant a session
-`)
+	writeFile(t, filepath.Join(root, "openspec", "specs", "auth", "spec.yaml"),
+		livingSpecYAML("auth", "Authentication.", "Password login", "The system SHALL allow login.", "Successful login"))
 
 	changeA := filepath.Join(root, "openspec", "changes", "100-change-a")
 	writeFile(t, filepath.Join(changeA, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeA, "specs", "auth", "spec.md"),
-		modifiedRequirement("Password login", "The system SHALL allow login via A.", "Successful login A"))
+	writeFile(t, filepath.Join(changeA, "specs", "auth", "spec.yaml"),
+		deltaYAML("auth", modifiedRequirement("Password login", "The system SHALL allow login via A.", "Successful login A")))
 	writeGates(t, changeA, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	changeB := filepath.Join(root, "openspec", "changes", "200-change-b")
 	writeFile(t, filepath.Join(changeB, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeB, "specs", "auth", "spec.md"),
-		modifiedRequirement("Password login", "The system SHALL allow login via B.", "Successful login B"))
+	writeFile(t, filepath.Join(changeB, "specs", "auth", "spec.yaml"),
+		deltaYAML("auth", modifiedRequirement("Password login", "The system SHALL allow login via B.", "Successful login B")))
 	writeGates(t, changeB, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	// Archiving A is refused: B is still in-flight and touches the same
@@ -532,7 +528,9 @@ func TestArchivePropagatesDeltaParseError(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := filepath.Join(root, "openspec", "changes", "001-bad-delta")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"), "not a valid delta at all\n")
+	// A well-formed YAML document that is not a valid delta: it declares a
+	// capability but no op entries, which ParseDeltaYAML rejects.
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"), "capability: auth\ndeltas: []\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	_, err := Archive(Request{Root: root, Change: "001-bad-delta"})
@@ -560,8 +558,8 @@ func TestArchivePropagatesFoldError(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := filepath.Join(root, "openspec", "changes", "001-modify-missing")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"),
-		modifiedRequirement("Nonexistent requirement", "Body.", "Scenario"))
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"),
+		deltaYAML("auth", modifiedRequirement("Nonexistent requirement", "The system SHALL do things.", "Scenario")))
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	_, err := Archive(Request{Root: root, Change: "001-modify-missing"})
@@ -603,40 +601,36 @@ func TestArchivePropagatesLedgerAppendError(t *testing.T) {
 
 func TestArchiveRendersRenamedAndRemovedDeltaOps(t *testing.T) {
 	root := newProjectRoot(t)
-	writeFile(t, filepath.Join(root, "openspec", "specs", "auth", "spec.md"), `# auth Specification
-
-## Purpose
-Authentication.
-
-## Requirements
-### Requirement: Password login
-The system SHALL allow login.
-
-#### Scenario: Successful login
-- **GIVEN** a user
-- **WHEN** they log in
-- **THEN** the system SHALL grant a session
-
-### Requirement: Legacy token login
-The system SHALL allow legacy token login.
-
-#### Scenario: Legacy login
-- **GIVEN** a legacy token
-- **WHEN** it is presented
-- **THEN** the system SHALL grant a session
+	writeFile(t, filepath.Join(root, "openspec", "specs", "auth", "spec.yaml"), `capability: auth
+purpose: Authentication.
+requirements:
+  - name: Password login
+    text: The system SHALL allow login.
+    scenarios:
+      - name: Successful login
+        given: ['a user']
+        when: ['they log in']
+        then: ['the system SHALL grant a session']
+  - name: Legacy token login
+    text: The system SHALL allow legacy token login.
+    scenarios:
+      - name: Legacy login
+        given: ['a legacy token']
+        when: ['it is presented']
+        then: ['the system SHALL grant a session']
 `)
 
 	changeDir := filepath.Join(root, "openspec", "changes", "010-rename-and-remove")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"),
-		"## RENAMED Requirements\n"+
-			"- FROM: `### Requirement: Password login`\n"+
-			"- TO: `### Requirement: Username and password login`\n"+
-			"\n"+
-			"## REMOVED Requirements\n"+
-			"### Requirement: Legacy token login\n"+
-			"**Reason**: no longer supported.\n"+
-			"**Migration**: none.\n")
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"),
+		"capability: auth\n"+
+			"deltas:\n"+
+			"  - op: RENAMED\n"+
+			"    from: Password login\n"+
+			"    to: Username and password login\n"+
+			"  - op: REMOVED\n"+
+			"    requirement:\n"+
+			"      name: Legacy token login\n")
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	res, err := Archive(Request{Root: root, Change: "010-rename-and-remove"})
@@ -681,10 +675,10 @@ func TestArchiveGroupWriteFailureLeavesNoLiveSpecsMutated(t *testing.T) {
 	root := newProjectRoot(t)
 	changeDir := filepath.Join(root, "openspec", "changes", "300-two-caps")
 	writeFile(t, filepath.Join(changeDir, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.md"),
-		addedRequirement("Password login", "The system SHALL allow login.", "Successful login"))
-	writeFile(t, filepath.Join(changeDir, "specs", "billing", "spec.md"),
-		addedRequirement("Invoice export", "The system SHALL export invoices.", "Successful export"))
+	writeFile(t, filepath.Join(changeDir, "specs", "auth", "spec.yaml"),
+		deltaYAML("auth", addedRequirement("Password login", "The system SHALL allow login.", "Successful login")))
+	writeFile(t, filepath.Join(changeDir, "specs", "billing", "spec.yaml"),
+		deltaYAML("billing", addedRequirement("Invoice export", "The system SHALL export invoices.", "Successful export")))
 	writeGates(t, changeDir, approvedRefineDesignSkipped(), approved(approve.StagePlan))
 
 	// discoverCapabilities sorts "auth" before "billing", so auth's write

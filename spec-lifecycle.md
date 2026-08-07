@@ -1,5 +1,15 @@
 # `spec-lifecycle` — Design Specification
 
+> **STATUS (2026-07-27, read first):** this is the original design document,
+> kept for provenance. Change `007-yaml-source-of-truth` **superseded its
+> OpenSpec-format premise**: specs and deltas are now authored as structured
+> YAML owned by this tool (JSON Schemas published with it), markdown is a
+> read-only projection, byte-compatibility with OpenSpec is no longer a goal,
+> and the `lifecycle apply` verb + `tasks.md` plan artifact are retired — the
+> plan stage now delegates to `milestoned-plan-dag` over `plan.yaml`
+> (constitution ADR-0004/ADR-0005). Where this document and the living spec
+> under `openspec/specs/` disagree, the living spec wins.
+
 *Version: v1 draft. Generated: 2026-07-02. Revised: 2026-07-03 (approval-authority framing; artifact-tree clarification; schema → `kentra-spec-lifecycle`; naming resolved) then **2026-07-03 (Option B: pure-Go rebuild — OpenSpec is now a format we conform to, not a runtime we run; research errata folded in)** then **2026-07-07 (§4.2/§6.2/§9.1 addendum — the "execution handoff" the harness `orchestration` module's §5.5 needs: an optional structured validation contract on a milestone, a Steps checkbox-tracking convention + `archive` tasks-completion gate, and a new `lifecycle apply` verb surfacing milestones + contracts as JSON — all three additive, backward compatible, shipped in this same revision).** Status: **DESIGN — pending user review.***
 
 *A standalone SDD primitive: a staged, gated, spec-driven issue lifecycle. It adopts the **OpenSpec on-disk convention** — directory layout, delta grammar, fold semantics — but **reimplements the whole mechanism in pure Go**; there is no OpenSpec runtime, no Node, no shell-out. OpenSpec-the-tool is a **format we stay byte-compatible with** (so a kentra repo's `openspec/` tree still reads as an OpenSpec repo, and we could re-adopt their tooling later), not a dependency we execute. **File-based gate records** are the canonical interface to any external enforcement engine. Companion primitive to [`adr-sourced-constitution`](https://github.com/kentra-io/adr-sourced-constitution) (the governance substrate). Consumed by the kentra harness, but — like the constitution primitive — framework-portable and not harness-bound.*

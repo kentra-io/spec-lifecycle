@@ -1,0 +1,39 @@
+capability: feature-intake
+purpose: |
+  Turn a raw feature request into a confirmed, well-formed intake issue that
+  downstream planning can act on.
+requirements:
+  - name: New feature intake
+    text: |
+      The system SHALL draft a candidate intake issue from a raw feature
+      request and MUST require explicit human confirmation before the issue is
+      recorded.
+    scenarios:
+      - name: Human confirms the drafted issue
+        given:
+          - "a raw feature request has been submitted"
+          - "the system has drafted a candidate intake issue"
+        when:
+          - "the human confirms the drafted issue"
+        then:
+          - "the intake issue is recorded"
+          - "the raw request is linked to the recorded issue"
+      - name: Human rejects the drafted issue
+        given:
+          - "the system has drafted a candidate intake issue"
+        when:
+          - "the human rejects the drafted issue"
+        then:
+          - "no intake issue is recorded"
+  - name: Oversized request is flagged
+    text: |
+      The system SHALL flag a feature request whose scope exceeds the
+      configured capability-size threshold.
+    scenarios:
+      - name: Request exceeds the threshold
+        given:
+          - "the capability-size threshold is configured"
+        when:
+          - "a request exceeding the threshold is submitted"
+        then:
+          - "the request is flagged as oversized"

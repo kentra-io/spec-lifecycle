@@ -68,6 +68,7 @@ func initCommand() *cli.Command {
 			&cli.StringFlag{Name: "source-type", Usage: "sourceTracking.type to seed: github-issue|generic|jira|none (a fresh lifecycle.yml only)"},
 			&cli.StringFlag{Name: "source-repo", Usage: "sourceTracking.repo to seed, e.g. kentra-io/kafka-dq (a fresh lifecycle.yml only)"},
 			&cli.BoolFlag{Name: "force", Usage: "overwrite a managed pointer block that drifted from what init last wrote"},
+			&cli.StringFlag{Name: "plan-dag-bin", Usage: "path to the milestoned-plan-dag binary for the preflight (default: $" + "LIFECYCLE_PLAN_DAG_BIN, else PATH lookup)"},
 		},
 		OnUsageError: func(_ context.Context, _ *cli.Command, err error, _ bool) error {
 			return &exitError{err: fmt.Errorf("init: %w", err), code: initExitCouldNotRun}
@@ -99,6 +100,7 @@ func runInit(cmd *cli.Command) error {
 		Runtimes:           runtimes,
 		SourceTrackingType: cmd.String("source-type"),
 		SourceTrackingRepo: cmd.String("source-repo"),
+		PlanDAGBinOverride: cmd.String("plan-dag-bin"),
 	}
 	if !cmd.Bool("force") && isTerminal(os.Stdin) {
 		opts.Confirm = interactiveConfirm(os.Stdin, stderr)

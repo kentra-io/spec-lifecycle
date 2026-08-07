@@ -212,8 +212,10 @@ func TestCheckReplay_TaintedByUnparsableArchivedDelta(t *testing.T) {
 	b := newFixtureBuilder(t)
 	change := b.step("auth", addDeltaText("Password login"))
 
-	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.md")
-	if err := os.WriteFile(deltaPath, []byte("not a delta at all, no recognized section"), 0o644); err != nil {
+	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.yaml")
+	// A leading TAB is illegal YAML indentation — spec.ParseDeltaYAML's decode
+	// fails outright, exercising replay's "could not parse archived delta" taint.
+	if err := os.WriteFile(deltaPath, []byte("deltas:\n\t- op: ADDED\n"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
@@ -238,7 +240,7 @@ func TestCheckReplay_TaintedByUnfoldableArchivedDelta(t *testing.T) {
 	// Corrupt the SECOND archived delta so it MODIFIEs a requirement name
 	// that was never ADDED — parses fine, but Fold itself refuses it
 	// (spec.KindFoldModifyMissing).
-	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change2, "specs", "auth", "spec.md")
+	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change2, "specs", "auth", "spec.yaml")
 	if err := os.WriteFile(deltaPath, []byte(modifyDeltaText("Never added", " (v2)")), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -317,7 +319,7 @@ func TestCheckImmutability_ManifestSHAPermissionError(t *testing.T) {
 
 	b := newFixtureBuilder(t)
 	change := b.step("auth", addDeltaText("Password login"))
-	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.md")
+	deltaPath := filepath.Join(b.root, "openspec", "changes", "archive", change, "specs", "auth", "spec.yaml")
 	if err := os.Chmod(deltaPath, 0o000); err != nil {
 		t.Fatalf("Chmod: %v", err)
 	}

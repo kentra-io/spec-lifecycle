@@ -39,8 +39,8 @@ func TestCheckConflictsPropagatesNonNotExistReadDirError(t *testing.T) {
 func TestCheckConflictsSkipsCapabilityThisChangeDoesNotTouch(t *testing.T) {
 	root := t.TempDir()
 	other := filepath.Join(root, "openspec", "changes", "200-other")
-	writeFile(t, filepath.Join(other, "specs", "billing", "spec.md"),
-		modifiedRequirement("Invoice export", "Body.", "Scenario"))
+	writeFile(t, filepath.Join(other, "specs", "billing", "spec.yaml"),
+		deltaYAML("billing", modifiedRequirement("Invoice export", "The system SHALL export.", "Scenario")))
 
 	// ownDeltas only targets "auth" — "billing" (the only capability the
 	// sibling touches) is irrelevant to this change.
@@ -61,16 +61,16 @@ func TestCheckConflictsWarnsWithoutFailingOnUnreadableSiblingDelta(t *testing.T)
 	root := t.TempDir()
 	other := filepath.Join(root, "openspec", "changes", "200-other")
 	writeFile(t, filepath.Join(other, "proposal.md"), validProposal)
-	// specs/auth/spec.md is a real file (so HasSpecsDeltas/discoverCapabilities
+	// specs/auth/spec.yaml is a real file (so HasSpecsDeltas/discoverCapabilities
 	// both see it) but made unreadable, so os.ReadFile fails on it.
-	deltaPath := filepath.Join(other, "specs", "auth", "spec.md")
-	writeFile(t, deltaPath, modifiedRequirement("Password login", "Body.", "Scenario"))
+	deltaPath := filepath.Join(other, "specs", "auth", "spec.yaml")
+	writeFile(t, deltaPath, deltaYAML("auth", modifiedRequirement("Password login", "The system SHALL log in.", "Scenario")))
 	if err := os.Chmod(deltaPath, 0o000); err != nil {
 		t.Fatalf("chmod delta unreadable: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(deltaPath, 0o644) })
 
-	ownDeltas := map[string]*spec.Delta{"auth": {Modified: []spec.Requirement{{Name: "Password login"}}}}
+	ownDeltas := map[string]*spec.Delta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}}}}}
 	conflicts, warnings, err := checkConflicts(root, "100-this-change", ownDeltas)
 	if err != nil {
 		t.Fatalf("checkConflicts: %v", err)
@@ -87,9 +87,9 @@ func TestCheckConflictsWarnsWithoutFailingOnUnparsableSiblingDelta(t *testing.T)
 	root := t.TempDir()
 	other := filepath.Join(root, "openspec", "changes", "200-other")
 	writeFile(t, filepath.Join(other, "proposal.md"), validProposal)
-	writeFile(t, filepath.Join(other, "specs", "auth", "spec.md"), "not a valid delta at all\n")
+	writeFile(t, filepath.Join(other, "specs", "auth", "spec.yaml"), "not a valid delta at all\n")
 
-	ownDeltas := map[string]*spec.Delta{"auth": {Modified: []spec.Requirement{{Name: "Password login"}}}}
+	ownDeltas := map[string]*spec.Delta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}}}}}
 	conflicts, warnings, err := checkConflicts(root, "100-this-change", ownDeltas)
 	if err != nil {
 		t.Fatalf("checkConflicts: %v", err)
@@ -106,9 +106,11 @@ func TestCheckConflictsWarnsWithoutFailingOnUnparsableSiblingDelta(t *testing.T)
 
 func TestTargetedNamesUnionsModifiedRemovedAndRenamedFrom(t *testing.T) {
 	d := &spec.Delta{
-		Modified: []spec.Requirement{{Name: "Password login"}},
-		Removed:  []string{"Legacy token login"},
-		Renamed:  []spec.Rename{{From: "Old name", To: "New name"}},
+		Deltas: []spec.DeltaEntry{
+			{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}},
+			{Op: spec.OpRemoved, Requirement: &spec.Requirement{Name: "Legacy token login"}},
+			{Op: spec.OpRenamed, From: "Old name", To: "New name"},
+		},
 	}
 	got := targetedNames(d)
 
