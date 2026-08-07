@@ -39,39 +39,39 @@ const (
 // name and are never stored in the source (a stored slug would be a second
 // source of truth that can drift — D1).
 type LivingSpec struct {
-	Capability   string            `yaml:"capability"`
-	Purpose      string            `yaml:"purpose,omitempty"`
-	Requirements []SpecRequirement `yaml:"requirements"`
+	Capability   string        `yaml:"capability"`
+	Purpose      string        `yaml:"purpose,omitempty"`
+	Requirements []Requirement `yaml:"requirements"`
 }
 
-// SpecRequirement is one requirement in the structured model — the shared
+// Requirement is one requirement in the structured model — the shared
 // requirement/scenario sub-shape that both a LivingSpec's requirements[] and
 // a delta's ADDED/MODIFIED (and name-only REMOVED) entries carry. The two
 // published JSON Schemas share it via $ref (design D4). Scenarios is an
 // ordered sequence (author order preserved).
-type SpecRequirement struct {
-	Name      string         `yaml:"name"`
-	Text      string         `yaml:"text,omitempty"`
-	Scenarios []SpecScenario `yaml:"scenarios,omitempty"`
+type Requirement struct {
+	Name      string     `yaml:"name"`
+	Text      string     `yaml:"text,omitempty"`
+	Scenarios []Scenario `yaml:"scenarios,omitempty"`
 }
 
-// SpecScenario is one scenario under a SpecRequirement. Given/When/Then are
+// Scenario is one scenario under a Requirement. Given/When/Then are
 // SEQUENCES of clauses — a single scenario may carry several of each (design
 // D1) — and their author order is preserved.
-type SpecScenario struct {
+type Scenario struct {
 	Name  string   `yaml:"name"`
 	Given []string `yaml:"given,omitempty"`
 	When  []string `yaml:"when,omitempty"`
 	Then  []string `yaml:"then,omitempty"`
 }
 
-// SpecDelta is the structured YAML source of one change's per-capability
+// Delta is the structured YAML source of one change's per-capability
 // spec delta — openspec/changes/<change>/specs/<capability>/spec.yaml
 // (design D2). Deltas is an ordered sequence of op-tagged entries; the fold
 // applies them keyed by requirement name in the fixed op order the engine
 // uses (RENAMED → REMOVED → MODIFIED → ADDED, see the Op constants above).
 // The fold retarget onto this model lands in milestone 2.
-type SpecDelta struct {
+type Delta struct {
 	Capability string       `yaml:"capability"`
 	Deltas     []DeltaEntry `yaml:"deltas"`
 }
@@ -84,8 +84,8 @@ type SpecDelta struct {
 //     name); text/scenarios are absent.
 //   - RENAMED — From and To name the rename; Requirement is nil.
 type DeltaEntry struct {
-	Op          Op               `yaml:"op"`
-	Requirement *SpecRequirement `yaml:"requirement,omitempty"`
-	From        string           `yaml:"from,omitempty"`
-	To          string           `yaml:"to,omitempty"`
+	Op          Op           `yaml:"op"`
+	Requirement *Requirement `yaml:"requirement,omitempty"`
+	From        string       `yaml:"from,omitempty"`
+	To          string       `yaml:"to,omitempty"`
 }

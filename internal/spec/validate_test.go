@@ -53,9 +53,9 @@ requirements:
 `
 
 func TestValidateYAML_ConformingSpecDelta(t *testing.T) {
-	sch, err := SpecDeltaSchema()
+	sch, err := DeltaSchema()
 	if err != nil {
-		t.Fatalf("SpecDeltaSchema: %v", err)
+		t.Fatalf("DeltaSchema: %v", err)
 	}
 	if err := ValidateYAMLBytes([]byte(conformingDeltaYAML), sch); err != nil {
 		t.Fatalf("conforming spec-delta was rejected: %v", err)
@@ -76,9 +76,9 @@ func TestValidateYAML_ConformingLivingSpec(t *testing.T) {
 // "YAML is validated against the published schema": a document that violates
 // the schema is rejected with the offending path named.
 func TestValidateYAML_SchemaViolationNamesPath(t *testing.T) {
-	sch, err := SpecDeltaSchema()
+	sch, err := DeltaSchema()
 	if err != nil {
-		t.Fatalf("SpecDeltaSchema: %v", err)
+		t.Fatalf("DeltaSchema: %v", err)
 	}
 
 	// op "DELETED" is not one of ADDED/MODIFIED/REMOVED/RENAMED — the
@@ -161,7 +161,7 @@ requirements:
 // TestDeltaEntryDecode confirms the op-tagged delta entries decode into the
 // structured model with from/to for renames and a nil requirement there.
 func TestDeltaEntryDecode(t *testing.T) {
-	var sd SpecDelta
+	var sd Delta
 	if err := yaml.Unmarshal([]byte(conformingDeltaYAML), &sd); err != nil {
 		t.Fatalf("Unmarshal: %v", err)
 	}

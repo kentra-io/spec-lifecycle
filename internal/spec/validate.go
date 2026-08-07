@@ -31,9 +31,9 @@ func LivingSpecSchema() (*jsonschema.Schema, error) {
 	return living, err
 }
 
-// SpecDeltaSchema returns the compiled spec-delta JSON Schema (draft
+// DeltaSchema returns the compiled spec-delta JSON Schema (draft
 // 2020-12), compiled in-process from the embedded, published schema bytes.
-func SpecDeltaSchema() (*jsonschema.Schema, error) {
+func DeltaSchema() (*jsonschema.Schema, error) {
 	_, delta, err := compileSchemas()
 	return delta, err
 }
@@ -75,7 +75,7 @@ func compileSchemas() (living, delta *jsonschema.Schema, err error) {
 // published JSON Schema. It returns nil when the document conforms, and an
 // error naming the offending JSON path (e.g. `/deltas/0/op`) when it does
 // not — so a schema violation points the author at the exact node. Obtain
-// sch from LivingSpecSchema or SpecDeltaSchema.
+// sch from LivingSpecSchema or DeltaSchema.
 //
 // doc is the value produced by yaml.Unmarshal into an `any`/map — the
 // decoded document, not raw bytes. It is normalized through JSON so YAML's

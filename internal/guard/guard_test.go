@@ -47,7 +47,7 @@ func newFixtureBuilder(t *testing.T) *fixtureBuilder {
 }
 
 // The *DeltaText helpers now emit the owned YAML spec-delta grammar
-// (SpecDelta: op-tagged entries, requirement/scenario sub-shape) — the
+// (Delta: op-tagged entries, requirement/scenario sub-shape) — the
 // authoritative archived-delta shape guard's from-empty replay reads after the
 // change-007 Milestone-4 retarget (spec.ParseDeltaYAML/FoldYAML/RenderProjection).
 // They are capability-agnostic (the capability is passed to step separately and
@@ -221,10 +221,10 @@ func TestRun_CleanBrownfieldCapability(t *testing.T) {
 	b.seedBrownfield("auth", &spec.LivingSpec{
 		Capability: "auth",
 		Purpose:    "Authentication.",
-		Requirements: []spec.SpecRequirement{{
+		Requirements: []spec.Requirement{{
 			Name: "Password login",
 			Text: "The system SHALL allow login.",
-			Scenarios: []spec.SpecScenario{{
+			Scenarios: []spec.Scenario{{
 				Name:  "Successful login",
 				Given: []string{"a user"},
 				When:  []string{"they log in"},

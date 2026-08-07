@@ -36,7 +36,7 @@ func mustParseLivingYAML(t *testing.T, src string) *LivingSpec {
 	return ls
 }
 
-func mustParseDeltaYAML(t *testing.T, src string) *SpecDelta {
+func mustParseDeltaYAML(t *testing.T, src string) *Delta {
 	t.Helper()
 	d, err := ParseDeltaYAML([]byte(src))
 	if err != nil {

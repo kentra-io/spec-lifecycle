@@ -20,7 +20,7 @@ import (
 // collision found (nil if none) plus any non-fatal warnings (a sibling
 // change whose delta could not be read/parsed — skipped, not fatal to
 // THIS archive).
-func checkConflicts(root, change string, ownDeltas map[string]*spec.SpecDelta) ([]Conflict, []string, error) {
+func checkConflicts(root, change string, ownDeltas map[string]*spec.Delta) ([]Conflict, []string, error) {
 	ownTargets := make(map[string]map[string]string, len(ownDeltas))
 	for cap, d := range ownDeltas {
 		ownTargets[cap] = targetedNames(d)
@@ -102,7 +102,7 @@ func checkConflicts(root, change string, ownDeltas map[string]*spec.SpecDelta) (
 // original-cased display name) — the set of ALREADY-EXISTING requirements
 // this delta touches (as opposed to ADDED, which names something new;
 // doc.go explains why ADDED is excluded here).
-func targetedNames(d *spec.SpecDelta) map[string]string {
+func targetedNames(d *spec.Delta) map[string]string {
 	out := map[string]string{}
 	for _, e := range d.Deltas {
 		switch e.Op {

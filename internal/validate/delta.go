@@ -48,7 +48,7 @@ func validateSpecsDeltas(dir string) ([]Finding, error) {
 		}}, nil
 	}
 
-	sch, err := spec.SpecDeltaSchema()
+	sch, err := spec.DeltaSchema()
 	if err != nil {
 		return nil, fmt.Errorf("validate: compiling spec-delta schema: %w", err)
 	}

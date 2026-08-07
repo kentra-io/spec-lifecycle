@@ -44,7 +44,7 @@ func TestCheckConflictsSkipsCapabilityThisChangeDoesNotTouch(t *testing.T) {
 
 	// ownDeltas only targets "auth" — "billing" (the only capability the
 	// sibling touches) is irrelevant to this change.
-	ownDeltas := map[string]*spec.SpecDelta{"auth": {}}
+	ownDeltas := map[string]*spec.Delta{"auth": {}}
 
 	conflicts, warnings, err := checkConflicts(root, "100-this-change", ownDeltas)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestCheckConflictsWarnsWithoutFailingOnUnreadableSiblingDelta(t *testing.T)
 	}
 	t.Cleanup(func() { _ = os.Chmod(deltaPath, 0o644) })
 
-	ownDeltas := map[string]*spec.SpecDelta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.SpecRequirement{Name: "Password login"}}}}}
+	ownDeltas := map[string]*spec.Delta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}}}}}
 	conflicts, warnings, err := checkConflicts(root, "100-this-change", ownDeltas)
 	if err != nil {
 		t.Fatalf("checkConflicts: %v", err)
@@ -89,7 +89,7 @@ func TestCheckConflictsWarnsWithoutFailingOnUnparsableSiblingDelta(t *testing.T)
 	writeFile(t, filepath.Join(other, "proposal.md"), validProposal)
 	writeFile(t, filepath.Join(other, "specs", "auth", "spec.yaml"), "not a valid delta at all\n")
 
-	ownDeltas := map[string]*spec.SpecDelta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.SpecRequirement{Name: "Password login"}}}}}
+	ownDeltas := map[string]*spec.Delta{"auth": {Deltas: []spec.DeltaEntry{{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}}}}}
 	conflicts, warnings, err := checkConflicts(root, "100-this-change", ownDeltas)
 	if err != nil {
 		t.Fatalf("checkConflicts: %v", err)
@@ -105,10 +105,10 @@ func TestCheckConflictsWarnsWithoutFailingOnUnparsableSiblingDelta(t *testing.T)
 // --- targetedNames ---
 
 func TestTargetedNamesUnionsModifiedRemovedAndRenamedFrom(t *testing.T) {
-	d := &spec.SpecDelta{
+	d := &spec.Delta{
 		Deltas: []spec.DeltaEntry{
-			{Op: spec.OpModified, Requirement: &spec.SpecRequirement{Name: "Password login"}},
-			{Op: spec.OpRemoved, Requirement: &spec.SpecRequirement{Name: "Legacy token login"}},
+			{Op: spec.OpModified, Requirement: &spec.Requirement{Name: "Password login"}},
+			{Op: spec.OpRemoved, Requirement: &spec.Requirement{Name: "Legacy token login"}},
 			{Op: spec.OpRenamed, From: "Old name", To: "New name"},
 		},
 	}

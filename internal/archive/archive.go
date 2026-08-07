@@ -87,7 +87,7 @@ func Archive(req Request) (Result, error) {
 	hasDelta := validate.HasSpecsDeltas(changeDir)
 
 	var capabilities []string
-	ownDeltas := map[string]*spec.SpecDelta{}
+	ownDeltas := map[string]*spec.Delta{}
 	if hasDelta {
 		capabilities, err = discoverCapabilities(changeDir)
 		if err != nil {
@@ -286,10 +286,10 @@ func Archive(req Request) (Result, error) {
 // deltaOpsFromDelta renders d's ops in the fold's own fixed order
 // (RENAMED -> REMOVED -> MODIFIED -> ADDED, spec-lifecycle.md §6.1) — see
 // doc.go for the RENAMED "<from> -> <to>" convention. The source is the
-// structured YAML delta (spec.SpecDelta); its entries are grouped by op
+// structured YAML delta (spec.Delta); its entries are grouped by op
 // into the fixed order here regardless of their author order, matching the
 // order FoldYAML applies them and the markdown engine's original output.
-func deltaOpsFromDelta(d *spec.SpecDelta) []DeltaOp {
+func deltaOpsFromDelta(d *spec.Delta) []DeltaOp {
 	var renamed, removed, modified, added []DeltaOp
 	for _, e := range d.Deltas {
 		switch e.Op {

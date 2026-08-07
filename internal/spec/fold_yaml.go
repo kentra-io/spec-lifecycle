@@ -64,7 +64,7 @@ func ParseLivingSpecYAML(data []byte) (*LivingSpec, error) {
 
 // ParseDeltaYAML decodes a change's per-capability spec delta
 // (openspec/changes/<change>/specs/<capability>/spec.yaml) into the structured
-// SpecDelta model (design D2) and enforces the delta content rules the markdown
+// Delta model (design D2) and enforces the delta content rules the markdown
 // ParseDelta enforced, ported onto the YAML model:
 //
 //   - Each op is one of ADDED/MODIFIED/REMOVED/RENAMED.
@@ -75,8 +75,8 @@ func ParseLivingSpecYAML(data []byte) (*LivingSpec, error) {
 //     (case-insensitive) — the duplicate-requirement rejection M2 pins.
 //
 // A document that is not valid YAML is reported as a decode error.
-func ParseDeltaYAML(data []byte) (*SpecDelta, error) {
-	var d SpecDelta
+func ParseDeltaYAML(data []byte) (*Delta, error) {
+	var d Delta
 	if err := yaml.Unmarshal(data, &d); err != nil {
 		return nil, fmt.Errorf("spec: not valid spec-delta YAML: %w", err)
 	}
@@ -88,7 +88,7 @@ func ParseDeltaYAML(data []byte) (*SpecDelta, error) {
 
 // checkDuplicateRequirementNames rejects two requirements sharing a name
 // (case-insensitive) in an ordered requirement sequence.
-func checkDuplicateRequirementNames(reqs []SpecRequirement) error {
+func checkDuplicateRequirementNames(reqs []Requirement) error {
 	seen := map[string]bool{}
 	for _, r := range reqs {
 		key := foldKey(r.Name)
@@ -106,7 +106,7 @@ func checkDuplicateRequirementNames(reqs []SpecRequirement) error {
 
 // validateDeltaEntries enforces the ported delta content rules on the
 // structured model (see ParseDeltaYAML's doc).
-func validateDeltaEntries(d *SpecDelta) error {
+func validateDeltaEntries(d *Delta) error {
 	seen := map[string]bool{}
 	noteName := func(name string) error {
 		key := foldKey(name)
@@ -174,7 +174,7 @@ func validateDeltaEntries(d *SpecDelta) error {
 // lower-cased requirement name, with the same conflict divergences the
 // markdown Fold surfaces (see fold.go's divergence table and errors.go's
 // Fold error kinds).
-func FoldYAML(capability string, base *LivingSpec, d *SpecDelta) (*LivingSpec, error) {
+func FoldYAML(capability string, base *LivingSpec, d *Delta) (*LivingSpec, error) {
 	set := newYAMLFoldSet(base)
 
 	var renamed, removed, modified, added []DeltaEntry
@@ -207,7 +207,7 @@ func FoldYAML(capability string, base *LivingSpec, d *SpecDelta) (*LivingSpec, e
 			}
 		}
 		set.delete(fromKey)
-		set.insertNew(toKey, SpecRequirement{Name: e.To, Text: req.Text, Scenarios: req.Scenarios})
+		set.insertNew(toKey, Requirement{Name: e.To, Text: req.Text, Scenarios: req.Scenarios})
 	}
 
 	for _, e := range removed {
@@ -268,16 +268,16 @@ func (ls *LivingSpec) RenderSource() ([]byte, error) {
 }
 
 // yamlFoldSet is the insertion-ordered map of requirement name (lower-cased) ->
-// SpecRequirement used by FoldYAML — the structured-model counterpart to
+// Requirement used by FoldYAML — the structured-model counterpart to
 // foldSet, with the same JS-Map semantics (delete-then-insert moves an entry
 // to the end; an in-place update never changes its position).
 type yamlFoldSet struct {
 	order []string
-	byKey map[string]SpecRequirement
+	byKey map[string]Requirement
 }
 
 func newYAMLFoldSet(base *LivingSpec) *yamlFoldSet {
-	s := &yamlFoldSet{byKey: map[string]SpecRequirement{}}
+	s := &yamlFoldSet{byKey: map[string]Requirement{}}
 	if base == nil {
 		return s
 	}
@@ -294,7 +294,7 @@ func (s *yamlFoldSet) has(key string) bool {
 	return ok
 }
 
-func (s *yamlFoldSet) get(key string) (SpecRequirement, bool) {
+func (s *yamlFoldSet) get(key string) (Requirement, bool) {
 	r, ok := s.byKey[key]
 	return r, ok
 }
@@ -313,7 +313,7 @@ func (s *yamlFoldSet) delete(key string) bool {
 	return true
 }
 
-func (s *yamlFoldSet) setExisting(key string, req SpecRequirement) bool {
+func (s *yamlFoldSet) setExisting(key string, req Requirement) bool {
 	if _, ok := s.byKey[key]; !ok {
 		return false
 	}
@@ -321,7 +321,7 @@ func (s *yamlFoldSet) setExisting(key string, req SpecRequirement) bool {
 	return true
 }
 
-func (s *yamlFoldSet) insertNew(key string, req SpecRequirement) bool {
+func (s *yamlFoldSet) insertNew(key string, req Requirement) bool {
 	if _, ok := s.byKey[key]; ok {
 		return false
 	}
@@ -330,11 +330,11 @@ func (s *yamlFoldSet) insertNew(key string, req SpecRequirement) bool {
 	return true
 }
 
-func (s *yamlFoldSet) list() []SpecRequirement {
+func (s *yamlFoldSet) list() []Requirement {
 	if len(s.order) == 0 {
 		return nil
 	}
-	out := make([]SpecRequirement, len(s.order))
+	out := make([]Requirement, len(s.order))
 	for i, k := range s.order {
 		out[i] = s.byKey[k]
 	}
