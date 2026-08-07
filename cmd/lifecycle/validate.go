@@ -29,14 +29,16 @@ func validateCommand() *cli.Command {
 		Name:      "validate",
 		Usage:     "validate a change folder's stage artifacts (read-only)",
 		ArgsUsage: " ",
-		Description: "Runs the delta-grammar parser (internal/spec, over every\n" +
-			"specs/**/spec.md delta) plus the custom-artifact structural checks\n" +
+		Description: "Runs the YAML schema-validate + parse (internal/spec, over every\n" +
+			"specs/**/spec.yaml delta) plus the custom-artifact structural checks\n" +
 			"(internal/validate: proposal.md frontmatter/issue-ref, design.md's\n" +
-			"NFR-discharge section, tasks.md's milestone/validation-contract\n" +
-			"format — spec-lifecycle.md §3.3/§4.2) against the artifact(s) --stage\n" +
-			"gates. Deterministic and read-only: writes nothing, calls nothing\n" +
-			"external. Stage skills run this as the gate pre-check; `approve`\n" +
-			"re-runs the same code path before writing a gate entry.\n\n" +
+			"NFR-discharge section — spec-lifecycle.md §3.3/§4.2) against the\n" +
+			"artifact(s) --stage gates. Deterministic and read-only: writes\n" +
+			"nothing. The plan stage is the one external call — it delegates to\n" +
+			"`milestoned-plan-dag validate` over the change's plan.yaml (design\n" +
+			"D6); every other stage is fully in-process. Stage skills run this as\n" +
+			"the gate pre-check; `approve` re-runs the same code path before\n" +
+			"writing a gate entry.\n\n" +
 			"Without --change, every change folder under openspec/changes/ (not\n" +
 			"changes/archive/) is checked, mirroring `lifecycle status`'s\n" +
 			"convention of reporting across all changes by default.\n\n" +

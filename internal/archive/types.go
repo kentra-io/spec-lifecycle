@@ -56,8 +56,9 @@ type Request struct {
 	// change touches the same requirement. Recorded the same way as
 	// ForceGates (Result/Record.ConflictsOverridden).
 	ForceConflicts bool
-	// ForceIncompleteTasks bypasses the tasks-completion gate's refusal
-	// when tasks.md has an unchecked tracked step. Recorded the same way
+	// ForceIncompleteTasks bypasses the step-completion gate's refusal
+	// when the change's plan.yaml reports a milestone that is not done
+	// (change 007 M5 — see tasks_gate.go). Recorded the same way
 	// as ForceGates/ForceConflicts (Result/Record.TasksIncompleteOverridden).
 	ForceIncompleteTasks bool
 }
