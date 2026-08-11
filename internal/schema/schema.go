@@ -1,9 +1,10 @@
 // Package schema embeds the natively-owned kentra-spec-lifecycle schema
 // descriptor (spec-lifecycle.md §4, implementation-plan.md §2.2): the
-// artifact set (proposal -> specs -> design -> tasks), its requires: DAG,
-// and the four artifact templates (spec-lifecycle.md §4's stage/content
-// table; the tasks.md template carries §4.2's milestone/validation-contract
-// grammar verbatim).
+// artifact set (proposal -> specs -> design), its requires: DAG, and the
+// three artifact templates. Change 007 retired the tasks artifact — the
+// plan stage's artifact is plan.yaml, owned and validated by
+// milestoned-plan-dag, and the descriptor declares no tasks template
+// (openspec/specs/plan-integration).
 //
 // The schema.yaml + templates/*.md shape mirrors OpenSpec v1.5.0's own
 // [experimental] project-local schema descriptor layout —

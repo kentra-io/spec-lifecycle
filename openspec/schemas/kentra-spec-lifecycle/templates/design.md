@@ -16,6 +16,21 @@
 
 <!-- Key technical choices with rationale; alternatives considered for each. -->
 
+## Components & Interfaces
+
+<!-- The approved decomposition: every component this change creates or
+     modifies, with its file, its type/class name, its one-line
+     responsibility, and the interface it exposes to the others. This is the
+     source of truth the plan stage projects into each milestone's
+     deliverables — the implementer gets the names from the milestone and
+     comes back here only for the rationale. Work that cannot be decomposed
+     here is not design-skippable. Write "(none — no new components)" if this
+     change introduces none. -->
+
+| Component | File | Responsibility |
+|---|---|---|
+| `<Name>` | `<path>` | <one line> |
+
 ## NFR Discharge
 
 <!-- One entry per non-functional requirement declared in this change's

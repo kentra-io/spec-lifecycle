@@ -2,6 +2,7 @@ package schema
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -261,5 +262,51 @@ func TestSchemaYAMLIsWellFormed(t *testing.T) {
 	}
 	if doc.Apply != nil {
 		t.Errorf("schema.yaml still declares an apply: block (%+v); change 007 M6 retired it", *doc.Apply)
+	}
+}
+
+// TestInstalledDescriptorMatchesEmbedded dogfoods the descriptor: this repo
+// plans itself through its own openspec/ tree, so its installed descriptor
+// must equal what the binary ships. `lifecycle init` installs the descriptor
+// only when its marker file is absent and never refreshes it, so without this
+// guard the repo's own tree silently rots — which is exactly what happened
+// after change 007 (it kept a pre-flip `tasks` artifact and a tasks.md
+// template, violating openspec/specs/plan-integration's own requirement).
+func TestInstalledDescriptorMatchesEmbedded(t *testing.T) {
+	mismatches, err := Verify("../..")
+	if err != nil {
+		t.Fatalf("Verify: %v", err)
+	}
+	for _, m := range mismatches {
+		t.Errorf("openspec/schemas/%s/%s: %s — re-copy it from internal/schema/", Name, m.Rel, m.Reason)
+	}
+
+	// Verify reports "missing" and "modified" only — it never reports a file
+	// the descriptor no longer ships. templates/tasks.md is exactly that case
+	// (retired by change 007, still installed), so check for extras directly.
+	embedded := map[string]bool{}
+	rels, err := relPaths()
+	if err != nil {
+		t.Fatalf("relPaths: %v", err)
+	}
+	for _, r := range rels {
+		embedded[r] = true
+	}
+	installed := Dir("../..")
+	err = filepath.WalkDir(installed, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, rerr := filepath.Rel(installed, p)
+		if rerr != nil {
+			return rerr
+		}
+		if rel = filepath.ToSlash(rel); !embedded[rel] {
+			t.Errorf("openspec/schemas/%s/%s: installed but not shipped — delete it", Name, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking %s: %v", installed, err)
 	}
 }

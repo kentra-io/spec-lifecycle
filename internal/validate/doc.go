@@ -29,7 +29,7 @@
 //
 //	refine  -> proposal.md + every changes/<change>/specs/**/spec.md delta
 //	design  -> design.md
-//	plan    -> tasks.md
+//	plan    -> plan.yaml (delegated to `milestoned-plan-dag validate`)
 //
 // (The bug flow's compressed profile — spec-lifecycle.md §8 — and its
 // repro/fix stage names are out of scope for this package; M2 covers only

@@ -107,8 +107,9 @@ artifacts:
   - id: design
     generates: design.md
     description: >-
-      Technical design with an explicit NFR-discharge section and any ADR
-      proposals (spec-lifecycle.md §4, §7).
+      Technical design with a components-and-interfaces decomposition, an
+      explicit NFR-discharge section, and any ADR proposals (spec-lifecycle.md
+      §4, §7).
     template: design.md
     instruction: |
       Create design.md — gated at gate 2, alongside the constitution

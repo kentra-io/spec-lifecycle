@@ -1,6 +1,6 @@
 ---
 name: lifecycle-design
-description: Conduct the design stage of a spec-lifecycle change — design.md with an NFR-discharge section and any ADR proposals, gated at gate 2 alongside the constitution plan-gate. Invoke explicitly with /lifecycle-design.
+description: Conduct the design stage of a spec-lifecycle change — design.md with a components-and-interfaces decomposition, an NFR-discharge section, and any ADR proposals, gated at gate 2 alongside the constitution plan-gate. Invoke explicitly with /lifecycle-design.
 disable-model-invocation: true
 ---
 

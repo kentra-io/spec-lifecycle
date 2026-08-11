@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kentra.io/spec-lifecycle/living-spec.schema.json",
+  "title": "kentra-spec-lifecycle living spec",
+  "description": "Structured YAML source of a capability's living spec (spec-lifecycle change 007, design D1). Markdown (spec.md) is a deterministic read-only projection of this document, never the hand-authored source. requirements and scenarios are ordered sequences; author order is the projection order and is preserved. Kebab-slugs are derived at render time from each name and are never stored in the source.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capability", "requirements"],
+  "properties": {
+    "capability": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string" },
+    "requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/requirement" }
+    }
+  },
+  "$defs": {
+    "requirement": {
+      "type": "object",
+      "description": "The requirement/scenario sub-shape shared by the living spec and every spec delta (design D4: shared via $ref). Only name is required at the schema level so a name-only REMOVED delta entry can reuse this shape; content rules (RFC-2119 text, >=1 scenario per ADDED/MODIFIED requirement) are enforced by the content checks retargeted in milestone 2, not by this schema.",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "text": { "type": "string" },
+        "scenarios": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scenario" }
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "given": { "type": "array", "items": { "type": "string" } },
+        "when": { "type": "array", "items": { "type": "string" } },
+        "then": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
