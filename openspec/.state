@@ -1,45 +1,45 @@
 schemaVersion: 1
 managed:
     - path: .agents/skills/lifecycle-archive/SKILL.md
-      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
+      hash: 439436dfe7a718a0794091a8e359b4c89e474337578871a6910fd2df797fe7b8
     - path: .agents/skills/lifecycle-bug/SKILL.md
-      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
+      hash: 575a20d050606edf712beecd5ffc42f1fa108e3303c901562e696dcb69ce9343
     - path: .agents/skills/lifecycle-design/SKILL.md
-      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+      hash: f2dabd114fda9a3d776be32e0c5edfd6cede86808e5a911781fe3a19294adeb0
     - path: .agents/skills/lifecycle-init/SKILL.md
-      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
+      hash: ff180ed2fca1e5ab5349e2bbb0923ada89dc1da00456db1a9104a2da4c499df2
     - path: .agents/skills/lifecycle-new-feature/SKILL.md
-      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
+      hash: 8e282fdf439bc266c6315f0ad1cd3669042791cf64c4a49e17ac39640a724a3c
     - path: .agents/skills/lifecycle-plan/SKILL.md
-      hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
+      hash: 5ae5c6e07ec9955d80bfbc849fa7dbdae94c57c39c98682742d9ab2aedfcd8c1
     - path: .agents/skills/lifecycle-refine/SKILL.md
       hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: .claude/skills/lifecycle-archive/SKILL.md
-      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
+      hash: 439436dfe7a718a0794091a8e359b4c89e474337578871a6910fd2df797fe7b8
     - path: .claude/skills/lifecycle-bug/SKILL.md
-      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
+      hash: 575a20d050606edf712beecd5ffc42f1fa108e3303c901562e696dcb69ce9343
     - path: .claude/skills/lifecycle-design/SKILL.md
-      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+      hash: f2dabd114fda9a3d776be32e0c5edfd6cede86808e5a911781fe3a19294adeb0
     - path: .claude/skills/lifecycle-init/SKILL.md
-      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
+      hash: ff180ed2fca1e5ab5349e2bbb0923ada89dc1da00456db1a9104a2da4c499df2
     - path: .claude/skills/lifecycle-new-feature/SKILL.md
-      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
+      hash: 8e282fdf439bc266c6315f0ad1cd3669042791cf64c4a49e17ac39640a724a3c
     - path: .claude/skills/lifecycle-plan/SKILL.md
-      hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
+      hash: 5ae5c6e07ec9955d80bfbc849fa7dbdae94c57c39c98682742d9ab2aedfcd8c1
     - path: .claude/skills/lifecycle-refine/SKILL.md
       hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: .cursor/skills/lifecycle-archive/SKILL.md
-      hash: 2cd67468881235624808c9f757f6c003a72d7c22b88753b49193757f801f1a60
+      hash: 439436dfe7a718a0794091a8e359b4c89e474337578871a6910fd2df797fe7b8
     - path: .cursor/skills/lifecycle-bug/SKILL.md
-      hash: 21c6c6ccce313c625fe9ab98f6a1ba6a3e175eba12f907327e116084e07fb593
+      hash: 575a20d050606edf712beecd5ffc42f1fa108e3303c901562e696dcb69ce9343
     - path: .cursor/skills/lifecycle-design/SKILL.md
-      hash: 0553b7a16caf2b60a1dc035e9520c7427036a5b781fbd34968d233d0a2244953
+      hash: f2dabd114fda9a3d776be32e0c5edfd6cede86808e5a911781fe3a19294adeb0
     - path: .cursor/skills/lifecycle-init/SKILL.md
-      hash: 5fc519d8016904648c8e6cbf9b44827c9e81fde5a2d956591e830a7b42ba44de
+      hash: ff180ed2fca1e5ab5349e2bbb0923ada89dc1da00456db1a9104a2da4c499df2
     - path: .cursor/skills/lifecycle-new-feature/SKILL.md
-      hash: bbdd336b12055e2c07346bdc4901c1ca87ad22e846a26548bbce2700dbae853d
+      hash: 8e282fdf439bc266c6315f0ad1cd3669042791cf64c4a49e17ac39640a724a3c
     - path: .cursor/skills/lifecycle-plan/SKILL.md
-      hash: 6de5578224cb1021151533d5def504b54cab10ab67d1a38b2cd35cad4c4163a4
+      hash: 5ae5c6e07ec9955d80bfbc849fa7dbdae94c57c39c98682742d9ab2aedfcd8c1
     - path: .cursor/skills/lifecycle-refine/SKILL.md
       hash: a64f0e9ec797e5e9f1afd4d04804ac05fe0eea79d21b6d91fddc10945c9557ae
     - path: AGENTS.md

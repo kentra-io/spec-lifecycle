@@ -15,10 +15,12 @@ your job is to install the CLI if needed, ask the two or three seeding
 questions that only the human can answer, run the compose, and explain
 what got installed.
 
-First check the state of the repo: if `lifecycle.yml` already exists, this
-project is already initialized — say so and stop. A re-run of `init` only
-refreshes scaffolding/skills; it never re-seeds an existing `lifecycle.yml`
-or touches in-flight changes, gate records, or the archive ledger.
+First read the state of the repo. If `lifecycle.yml` already exists, this
+project is initialized: tell the human what is already there and ask whether
+they want a refresh before running anything. A re-run is safe — it refreshes
+scaffolding and skills and leaves `lifecycle.yml`, in-flight changes, gate
+records, and the archive ledger untouched — so the reason to ask is consent,
+not risk.
 
 ## Ensure the `lifecycle` CLI is available
 
