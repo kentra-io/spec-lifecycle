@@ -34,12 +34,12 @@ func TestBuildSkillItems_AllSkillsPerRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSkillItems: %v", err)
 	}
-	// 6 skills * 3 trees.
-	if len(items) != 18 {
-		t.Fatalf("BuildSkillItems() = %d items, want 18", len(items))
+	// 7 skills * 3 trees.
+	if len(items) != 21 {
+		t.Fatalf("BuildSkillItems() = %d items, want 21", len(items))
 	}
 
-	wantSkills := []string{"lifecycle-refine", "lifecycle-design", "lifecycle-init", "lifecycle-bug", "lifecycle-archive", "lifecycle-new-feature"}
+	wantSkills := []string{"lifecycle-refine", "lifecycle-design", "lifecycle-plan", "lifecycle-init", "lifecycle-bug", "lifecycle-archive", "lifecycle-new-feature"}
 	wantDirs := map[string]string{
 		config.RuntimeClaudeCode: ".claude",
 		config.RuntimeCursor:     ".cursor",
@@ -69,8 +69,8 @@ func TestBuildSkillItems_SingleRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSkillItems: %v", err)
 	}
-	if len(items) != 6 {
-		t.Fatalf("BuildSkillItems(cursor) = %d items, want 6", len(items))
+	if len(items) != 7 {
+		t.Fatalf("BuildSkillItems(cursor) = %d items, want 7", len(items))
 	}
 	for _, it := range items {
 		if filepath.ToSlash(it.Rel)[:len(".cursor/")] != ".cursor/" {
@@ -123,7 +123,7 @@ func TestSkillNamesAndContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("skillNames: %v", err)
 	}
-	want := []string{"lifecycle-archive", "lifecycle-bug", "lifecycle-design", "lifecycle-init", "lifecycle-new-feature", "lifecycle-refine"}
+	want := []string{"lifecycle-archive", "lifecycle-bug", "lifecycle-design", "lifecycle-init", "lifecycle-new-feature", "lifecycle-plan", "lifecycle-refine"}
 	if len(names) != len(want) {
 		t.Fatalf("skillNames() = %v, want %v", names, want)
 	}
