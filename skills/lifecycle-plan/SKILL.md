@@ -51,6 +51,17 @@ spec.yaml scenario → milestone criterion (given/when/then, written out) → na
   Copy the scenario's `given`/`when`/`then` out in full; the implementer never
   opens the delta to read them. Set `name` to the test that proves it —
   `internal/widget/api_test.go::TestCreateRejectsEmptyName`.
+  Copy each clause **whole and unbroken**. Say more if the implementer needs
+  more, but put it before or after the copied text — never splice a
+  parenthetical or an em-dash aside into the middle of the clause. A clause
+  interrupted mid-sentence no longer matches the scenario it came from, and the
+  trace from delta to criterion is the one thing this chain exists to keep:
+
+  ```yaml
+  # the scenario's then: "submission fails naming the name field, and nothing is stored"
+  then: submission fails naming the name field, and nothing is stored — errors.Is(err, ErrEmptyName) and the store holds zero entries   # yes
+  then: submission fails naming the name field (errors.Is(err, ErrEmptyName)), and nothing is stored                                    # no — spliced
+  ```
 - **`check`** — this repo's standard validation command, the one a maintainer
   runs before pushing. The same command on most milestones is correct: it proves
   nothing regressed and that the new tests ran inside the real suite. The named
