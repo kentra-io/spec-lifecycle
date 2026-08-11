@@ -38,10 +38,15 @@ send the human to `/lifecycle-bug` instead — this skill is feature-only.
    on to other topics is not confirmation. If they haven't confirmed,
    create nothing and either revise the draft or stop.
 
-   Once confirmed, run:
+   Once confirmed, read `sourceTracking.repo` from `lifecycle.yml` and pass it
+   explicitly — `gh` otherwise infers the repo from the current directory's
+   git remote, which files the issue against whatever repo you happen to be
+   standing in:
    ```
-   gh issue create --title "<title>" --body "<body>"
+   gh issue create --repo <owner>/<repo> --title "<title>" --body "<body>"
    ```
+   If `sourceTracking.type` is `none` or `repo` is empty, stop and ask the
+   human which repo the issue belongs to — do not guess from the remote.
    `gh` prints the new issue's URL
    (`https://github.com/<owner>/<repo>/issues/<n>`); derive the
    `<owner>/<repo>#<n>` reference from it. This is the `issue:` value the
@@ -73,6 +78,12 @@ send the human to `/lifecycle-bug` instead — this skill is feature-only.
    (spec-lifecycle.md §3.1, "the artifact is the interface"), so it re-reads
    the issue and this stub from scratch rather than trusting anything
    carried over from this conversation.
+
+   Mention `designSkip` to the human when handing off: refine may propose
+   skipping the design stage for small, local, architecturally inert work,
+   and the human approves or rejects that proposal at gate 1. Work that
+   needs class-level design is never design-skippable — the components live
+   in `design.md`, and the plan stage projects them into milestones.
 
 ## Never
 
