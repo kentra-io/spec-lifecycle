@@ -52,9 +52,12 @@ skill. A promoted bug's gate records may mix `repro`/`fix` with
    ```
    `lifecycle validate` covers the three feature-flow stages only
    (`refine`, `design`, `plan`); the repro gate has no separate validate
-   step. If this bug turned out to be spec-affecting and you added a
-   `specs/<capability>/spec.yaml` delta, validate that delta with
-   `lifecycle validate --stage refine --change <change>` before approving.
+   step — `approve` re-runs the same check internally and refuses to write
+   the gate if the artifact has errors, so an invalid artifact can never
+   slip through by skipping it. If this bug turned out to be spec-affecting
+   and you added a `specs/<capability>/spec.yaml` delta, validate that
+   delta with `lifecycle validate --stage refine --change <change>` before
+   approving.
 3. Implement the fix and confirm the repro test now passes with no
    regressions. Surface that to the human, and on their explicit approval
    run:
