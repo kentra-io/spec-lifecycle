@@ -1,0 +1,31 @@
+capability: widget-intake
+deltas:
+  - op: ADDED
+    requirement:
+      name: 'Widget definitions are validated on submission'
+      text: |
+        The system SHALL validate a submitted widget definition and SHALL
+        reject it, naming the failing field, when the name is empty or the
+        size is not a positive integer.
+      scenarios:
+        - name: 'empty name is rejected'
+          given:
+            - 'a widget definition whose name is the empty string'
+          when:
+            - 'it is submitted'
+          then:
+            - 'submission fails naming the name field, and nothing is stored'
+        - name: 'non-positive size is rejected'
+          given:
+            - 'a widget definition whose size is zero'
+          when:
+            - 'it is submitted'
+          then:
+            - 'submission fails naming the size field, and nothing is stored'
+        - name: 'a valid definition is stored and retrievable'
+          given:
+            - 'a widget definition with a non-empty name and a size of 3'
+          when:
+            - 'it is submitted'
+          then:
+            - 'submission succeeds and the widget is retrievable by its returned id'
