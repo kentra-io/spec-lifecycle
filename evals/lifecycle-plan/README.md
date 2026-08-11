@@ -24,10 +24,14 @@ Stop it before it runs `lifecycle approve` — the eval grades the drafted
 
 1. `milestoned-plan-dag validate openspec/changes/000-widget-intake/plan.yaml`
    exits 0.
-2. Every scenario in the delta is discharged by some milestone criterion:
+2. Every scenario in the delta is discharged by some milestone criterion. Run
+   from this repo's root with both paths absolute — `go test ./evals/` runs
+   the binary with `evals/` as its cwd, and `EVAL_PLAN` lives in the scratch
+   repo from Setup while `EVAL_DELTA` lives in this repo, so they don't share
+   a root either:
    ```
-   EVAL_PLAN=<path to plan.yaml> \
-   EVAL_DELTA=evals/lifecycle-plan/fixture/specs/widget-intake/spec.yaml \
+   EVAL_PLAN=$PWD/<path to plan.yaml> \
+   EVAL_DELTA=$PWD/evals/lifecycle-plan/fixture/specs/widget-intake/spec.yaml \
    go test ./evals/ -run TestScenarioCoverage -v
    ```
 3. A **second** fresh agent, handed exactly one milestone plus the repository,

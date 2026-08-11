@@ -84,9 +84,12 @@ func TestScenarioCoverage(t *testing.T) {
 
 // coveredBy tolerates a criterion that says more than the scenario, but not one
 // that says less: the scenario's clause must appear inside some criterion.
+// The check is deliberately one-directional — accepting the reverse (a
+// criterion that is merely a substring of the scenario) would let a stub or
+// blank criterion silently discharge every scenario.
 func coveredBy(criteria []string, want string) bool {
 	for _, c := range criteria {
-		if strings.Contains(c, want) || strings.Contains(want, c) {
+		if strings.Contains(c, want) {
 			return true
 		}
 	}
