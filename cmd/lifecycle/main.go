@@ -30,8 +30,11 @@ func main() {
 	}
 }
 
-func run(ctx context.Context, args []string) error {
-	cmd := &cli.Command{
+// rootCommand builds the CLI's command tree. It is factored out of run so a
+// test can walk the real registered commands and flags rather than a
+// hand-maintained copy of them (see skilldrift_test.go).
+func rootCommand() *cli.Command {
+	return &cli.Command{
 		Name:    "lifecycle",
 		Usage:   "stage-gated OpenSpec-format change lifecycle",
 		Version: buildVersion(),
@@ -44,5 +47,8 @@ func run(ctx context.Context, args []string) error {
 			guardCommand(),
 		},
 	}
-	return cmd.Run(ctx, args)
+}
+
+func run(ctx context.Context, args []string) error {
+	return rootCommand().Run(ctx, args)
 }
