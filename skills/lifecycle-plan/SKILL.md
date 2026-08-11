@@ -25,8 +25,9 @@ Create a task for each of these and complete them in order:
 2. Draft `plan.yaml` following `plan-author`
 3. Build the coverage map — every delta scenario to the milestone that discharges it
 4. Validate
-5. Present the milestones and the coverage map to the human
-6. Approve, only on their explicit go-ahead
+5. Run the constitution plan-gate against `plan.yaml`; resolve every deviation
+6. Present the milestones and the coverage map to the human
+7. Approve, only on their explicit go-ahead
 
 ## Self-contained is the bar
 
@@ -75,7 +76,10 @@ Stop, write nothing, and hand back to the human when:
 - a scenario in the delta has no milestone that could discharge it without work
   nobody approved;
 - the plan would need a component the approved artifacts never name;
-- `design.md` is absent and the change was not design-skipped.
+- `design.md` is absent and the change was not design-skipped;
+- the plan-gate reports a deviation against `plan.yaml` that is neither
+  conformed nor amended — even when the change was design-skipped; a skipped
+  design does not skip the constitution gate (spec-lifecycle.md §3.2).
 
 ## Gate mechanics
 
@@ -88,6 +92,8 @@ digraph plan_stage {
     "HALT — hand back to human" [shape=doublecircle];
     "Validate" [shape=box];
     "Valid?" [shape=diamond];
+    "Run plan-gate against plan.yaml" [shape=box];
+    "Deviations resolved?" [shape=diamond];
     "Present milestones + coverage map" [shape=box];
     "Human approves?" [shape=diamond];
     "lifecycle approve --stage plan" [shape=doublecircle];
@@ -100,7 +106,10 @@ digraph plan_stage {
     "Every scenario covered?" -> "Validate" [label="yes"];
     "Validate" -> "Valid?";
     "Valid?" -> "Draft plan.yaml" [label="no, fix"];
-    "Valid?" -> "Present milestones + coverage map" [label="yes"];
+    "Valid?" -> "Run plan-gate against plan.yaml" [label="yes"];
+    "Run plan-gate against plan.yaml" -> "Deviations resolved?";
+    "Deviations resolved?" -> "HALT — hand back to human" [label="no"];
+    "Deviations resolved?" -> "Present milestones + coverage map" [label="yes"];
     "Present milestones + coverage map" -> "Human approves?";
     "Human approves?" -> "Draft plan.yaml" [label="changes requested"];
     "Human approves?" -> "lifecycle approve --stage plan" [label="yes"];
@@ -113,15 +122,35 @@ digraph plan_stage {
    milestoned-plan-dag validate openspec/changes/<change>/plan.yaml
    lifecycle validate --stage plan --change <change>
    ```
-3. **List the milestones back to the human as skimmable bullets** — one line
+3. Invoke `/plan-gate` (the companion `adr-sourced-constitution` primitive's
+   skill) against the validated `plan.yaml` — **this stage's artifact**, not
+   gate 2's `design.md`, and not whatever `deviation.json` gate 2 already left
+   in this folder: that record was graded against `design.md`; gate 3 needs
+   its own, graded against the plan (spec-lifecycle.md §3.3, §7.5). This
+   applies even when the change was design-skipped — a skipped design does
+   not skip the constitution gate; the plan-gate still runs at gate 3
+   (spec-lifecycle.md §3.2). **Explicitly tell `/plan-gate` to write its
+   report to `<changefolder>/deviation.json`** — overwriting gate 2's copy,
+   which is expected; gate 3 only needs its own — instead of its own default
+   `./deviation.json`. This is a plain instruction to the skill, not a
+   `lifecycle` CLI flag; `lifecycle approve` only ever reads `deviation.json`
+   from that fixed path, so getting the write location right here is
+   load-bearing. Resolve every deviation `/plan-gate` reports **conform or
+   amend** before moving on: either change `plan.yaml` so it no longer
+   conflicts, or accept an ADR proposal that amends the rule (the
+   constitution primitive's consent flow — its own `adr-draft`/
+   `constitution adr new` path, gated by its own permission prompt). Do not
+   carry an unresolved deviation into the human review in step 4.
+4. **List the milestones back to the human as skimmable bullets** — one line
    each: number, goal, and the tests it adds. Most plans are skimmed, not read;
    this summary is what actually gets reviewed. Follow it with the coverage map:
-   every scenario in the delta and the milestone that discharges it.
-4. Wait for explicit approval or requested changes. On requested changes, revise
+   every scenario in the delta and the milestone that discharges it, and the
+   validated `deviation.json`'s outcome.
+5. Wait for explicit approval or requested changes. On requested changes, revise
    and return to step 2.
 
 <HARD-GATE>
-5. Only after the human's explicit, conversational approval of the exact plan
+6. Only after the human's explicit, conversational approval of the exact plan
    you just showed them:
    ```
    lifecycle approve --stage plan --approve <change>
@@ -146,5 +175,6 @@ afterwards.
 | "`check: go test ./internal/foo/...`" | Scoping the check to the milestone hides regressions. Use the repo's standard command. |
 | "`paths: ['**']`" | An unconfined write-set makes the diff gate vacuous. |
 | "The design didn't cover this, I'll decide it here" | Plan-stage architecture is ungated architecture. HALT. |
+| "Gate 2's `deviation.json` already covers this" | It graded `design.md`. Gate 3 re-runs `/plan-gate` against `plan.yaml` and writes its own report — even on a design-skipped change. |
 | "Milestone 4 finishes what milestone 3 started" | Every milestone ends green on the standard check. |
 | "The plan validates, so it's ready" | `validate` grades grammar, never self-containment. Read one milestone alone and see if you could start. |

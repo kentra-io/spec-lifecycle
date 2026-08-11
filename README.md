@@ -11,7 +11,7 @@ Companion primitive to [`adr-sourced-constitution`](https://github.com/kentra-io
 ## Shape
 
 - **Layer 1** — `lifecycle` CLI (single static Go binary, deterministic, no LLM, no external language runtime): `init` · `validate` · `approve` · `status` · `archive` · `guard`. YAML parse, JSON-Schema validation, fold, and markdown render are all in-process (constitution ADR-0004).
-- **Layer 2** — agent-agnostic skills (SKILL.md standard), fanned out by `lifecycle init` to the configured runtime trees: stage conduct (`lifecycle-refine`, `lifecycle-design`), intake (`lifecycle-new-feature`, `lifecycle-bug`), archive discipline (`lifecycle-archive`), setup (`lifecycle-init`). Plan authoring uses `milestoned-plan-dag`'s `plan-author` skill.
+- **Layer 2** — agent-agnostic skills (SKILL.md standard), fanned out by `lifecycle init` to the configured runtime trees: stage conduct (`lifecycle-refine`, `lifecycle-design`, `lifecycle-plan`), intake (`lifecycle-new-feature`, `lifecycle-bug`), archive discipline (`lifecycle-archive`), setup (`lifecycle-init`). `lifecycle-plan` delegates `plan.yaml`'s grammar and CLI validation to `milestoned-plan-dag`'s `plan-author` skill.
 - **Layer 3** — integrations: the `kentra-spec-lifecycle` schema descriptor + published JSON Schemas (`living-spec.schema.json`, `spec-delta.schema.json`), the constitution seam (plan-gate at gates 2/3), the `milestoned-plan-dag` seam (plan gate + archive step-completion gate), engine/CI record consumers.
 
 Correctness is proven by checked-in golden projection fixtures (source YAML ↔ expected markdown, byte-identical) plus `lifecycle guard`'s from-empty replay (constitution ADR-0003/ADR-0005).
