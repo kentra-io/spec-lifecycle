@@ -21,7 +21,11 @@ gate 3 regardless of a design-skip.
 ## What this stage produces
 
 `design.md` — Context, Goals/Non-Goals, Decisions (with alternatives
-considered), an explicit **NFR Discharge** section accounting for every NFR
+considered), a **Components & Interfaces** section naming every component this
+change creates or modifies (file, name, one-line responsibility) — this is the
+decomposition the plan stage projects into milestone deliverables, so a change
+whose components you cannot name here was not design-skippable — an explicit
+**NFR Discharge** section accounting for every NFR
 the refine delta declared that belongs here (spec-lifecycle.md §4.1 —
 internal-quality concerns with no externally observable behavior), and any
 **ADR proposals** this design requires as separate files,
