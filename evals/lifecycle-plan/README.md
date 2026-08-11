@@ -52,3 +52,18 @@ Record each run's outcome below with the date and the skill's commit.
 
 | Date | Skill commit | 1. valid | 2. coverage | 3. no questions |
 |---|---|---|---|---|
+| 2026-08-11 | `8eed312` | pass | **fail** (2 of 3 scenarios) | pass |
+| 2026-08-11 | `867c829` | pass | pass | pass |
+
+Run 1's coverage failure was a skill defect, fixed in `867c829` rather than
+worked around. The planner copied each scenario's `then` out but spliced its
+own detail into the middle of the clause — `submission fails naming the name
+field (errors.Is(err, ErrEmptyName)), and nothing is stored` — so the clause no
+longer matched the scenario it came from. The one scenario that passed did so
+only because its elaboration was appended rather than inserted. The skill said
+"copy out in full" but never said the copy had to stay unbroken; it does now.
+
+Both runs used the same fixture and a fresh agent per run. Condition 3 was put
+to a second fresh agent handed only milestone 1 and the repository; in both
+runs it stated its file list, contents, and done-condition without asking
+anything.
