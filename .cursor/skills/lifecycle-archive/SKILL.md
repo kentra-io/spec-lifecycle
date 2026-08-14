@@ -14,10 +14,12 @@ there is no `openspec archive` to shell out to (spec-lifecycle.md §6.2).
 1. **Confirm every required gate is approved.** Run
    `lifecycle status --change <change>`. For a feature: `refine`,
    `design` (unless `designSkipped: true` on the refine entry), and `plan`
-   must all show `approved`. For a bug: `repro` (and `fix`, if the fix
-   stage ran) must show `approved`; a promoted bug additionally needs
-   `design`/`plan`. If anything required is `pending` or `rejected`, stop
-   and send the change back to the relevant stage skill — do not reach for
+   must all show `approved`. For a bug: both `repro` and `fix` must show
+   `approved` — a bug's gate set is unconditional, so an unapproved `fix`
+   blocks the archive even when the fix is already committed; a promoted
+   bug additionally needs `design`/`plan`. If anything required is
+   `pending` or `rejected`, stop and send the change back to the relevant
+   stage skill — do not reach for
    `--force-gates` to work around a gate that simply hasn't happened yet.
 2. **Run the archive:**
    ```

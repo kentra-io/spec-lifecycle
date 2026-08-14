@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "change": "000-widget-intake",
+  "issue": "kentra-io/spec-lifecycle#0",
+  "gates": [
+    {
+      "stage": "refine",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {
+        "proposal.md": "sha256:f00e090193fa5351d7ef0e017610825f62394663547b11f93b24cbc4a47328c4",
+        "specs/widget-intake/spec.yaml": "sha256:ef869c99a6d802e76b91fa6e391499d9bc6fa96914a7daee1315293eb0b7f901"
+      },
+      "constitutionHash": null,
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "eval-fixture",
+      "approvedAt": "2026-08-11T00:00:00Z",
+      "notes": "hand-authored eval fixture — not produced by lifecycle approve"
+    },
+    {
+      "stage": "design",
+      "status": "approved",
+      "designSkipped": false,
+      "artifacts": {
+        "design.md": "sha256:9f136938293e1c378ef155fc0a10cfd5cb7bb1130b83aed70817b551926d1a64"
+      },
+      "constitutionHash": null,
+      "deviationConstitutionHash": null,
+      "deviationRef": null,
+      "approvedBy": "eval-fixture",
+      "approvedAt": "2026-08-11T00:00:00Z",
+      "notes": "hand-authored eval fixture — not produced by lifecycle approve"
+    }
+  ]
+}

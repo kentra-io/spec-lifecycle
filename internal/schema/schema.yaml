@@ -107,15 +107,19 @@ artifacts:
   - id: design
     generates: design.md
     description: >-
-      Technical design with an explicit NFR-discharge section and any ADR
-      proposals (spec-lifecycle.md §4, §7).
+      Technical design with a components-and-interfaces decomposition, an
+      explicit NFR-discharge section, and any ADR proposals (spec-lifecycle.md
+      §4, §7).
     template: design.md
     instruction: |
       Create design.md — gated at gate 2, alongside the constitution
       plan-gate (spec-lifecycle.md §3.3, §7).
 
       Sections: Context, Goals/Non-Goals, Decisions (with alternatives
-      considered), **NFR Discharge** (how every NFR declared in this
+      considered), **Components & Interfaces** (every component this change
+      creates or modifies — file, name, one-line responsibility — the
+      decomposition the plan stage projects into milestone deliverables),
+      **NFR Discharge** (how every NFR declared in this
       change's specs/ delta that belongs here — spec-lifecycle.md §4.1 — is
       met; every declared NFR must be accounted for somewhere), ADR
       proposals (list any adr-proposals/*.md files in this change folder —

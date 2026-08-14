@@ -45,12 +45,25 @@ skill. A promoted bug's gate records may mix `repro`/`fix` with
 1. Reproduce the bug. Write the failing test before touching the fix.
    If you cannot reproduce it, stop here and surface `Needs Input` to the
    human — do not proceed on a guessed diagnosis.
-2. Run `lifecycle validate --stage repro`, fix any findings, surface the
-   repro to the human, and on their explicit approval run
-   `lifecycle approve --stage repro --approve <change>`.
-3. Implement the fix. Run `lifecycle validate --stage fix`, fix any
-   findings, surface the fix (test now passing) to the human, and on their
-   explicit approval run `lifecycle approve --stage fix --approve <change>`.
+2. Surface the repro and its failing test to the human. On their explicit
+   approval, run:
+   ```
+   lifecycle approve --stage repro --approve <change>
+   ```
+   `lifecycle validate` covers the three feature-flow stages only
+   (`refine`, `design`, `plan`); the repro gate has no separate validate
+   step — `approve` re-runs the same check internally and refuses to write
+   the gate if the artifact has errors, so an invalid artifact can never
+   slip through by skipping it. If this bug turned out to be spec-affecting
+   and you added a `specs/<capability>/spec.yaml` delta, validate that
+   delta with `lifecycle validate --stage refine --change <change>` before
+   approving.
+3. Implement the fix and confirm the repro test now passes with no
+   regressions. Surface that to the human, and on their explicit approval
+   run:
+   ```
+   lifecycle approve --stage fix --approve <change>
+   ```
 4. Both `approve` invocations are mutating — never pre-grant either in any
    pre-approved-command / `allowed-tools` list; the harness permission
    prompt on the exact command is the independent consent checkpoint.
