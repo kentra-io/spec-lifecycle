@@ -22,7 +22,7 @@ scaffolding and skills and leaves `lifecycle.yml`, in-flight changes, gate
 records, and the archive ledger untouched — so the reason to ask is consent,
 not risk.
 
-## Ensure the `lifecycle` CLI is available
+## Ensure the CLIs are available
 
 Everything below shells out to `lifecycle`. If it is not on PATH, install
 the prebuilt release — do **not** build from source or install a Go
@@ -35,6 +35,20 @@ brew install kentra-io/tap/lifecycle
 (No Homebrew? Grab the platform archive from
 https://github.com/kentra-io/spec-lifecycle/releases and put `lifecycle`
 on PATH.)
+
+Install the **`milestoned-plan-dag` companion** at the same time:
+
+```
+brew install kentra-io/tap/milestoned-plan-dag
+```
+
+`lifecycle` shells out to it (resolved by that exact name on PATH) for the
+plan-stage gate (`lifecycle validate --stage plan`) and the archive
+step-completion gate. `lifecycle init` only *warns* when it is missing, so
+a repo seeded without it looks fine until planning fails later — install
+both now rather than debugging that gap at the gate. (Archive from
+https://github.com/kentra-io/milestoned-plan-dag/releases if no Homebrew;
+`LIFECYCLE_PLAN_DAG_BIN` overrides the PATH lookup if it lives elsewhere.)
 
 ## Elicit the seeding choices
 

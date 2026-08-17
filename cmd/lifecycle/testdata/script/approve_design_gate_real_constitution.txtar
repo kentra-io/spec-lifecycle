@@ -22,7 +22,11 @@ env HOME=/no-home
 exec constitution --version
 stdout 'constitution version'
 
-exec constitution adr new --title 'Use structured logging' --category architecture --body-file adr-body.md --rule 'Services MUST emit structured (JSON) logs.'
+# `adr new` takes no --category flag: the category rides on --rule, as
+# "<category>/<slug>: <text>" (adr-sourced-constitution v0.2.0). The category
+# must already be in constitution.yml's vocabulary, or --new-category is
+# required.
+exec constitution adr new --title 'Use structured logging' --body-file adr-body.md --rule 'architecture/structured-logging: Services MUST emit structured (JSON) logs.'
 exists constitution/constitution.md
 
 # --- valid deviation.json: gate succeeds, both hashes recorded ---
@@ -31,9 +35,9 @@ exec lifecycle approve --stage design --approve --approved-by jan 042-user-auth
 stdout 'approve: approved stage "design" for 042-user-auth'
 ! stderr 'constitutionHash changed'
 
-exec lifecycle status --change 042-user-auth --format json
-stdout '"stage": "design"'
-stdout '"state": "approved"'
+exec lifecycle status --change 042-user-auth --format yaml
+stdout 'stage: design'
+stdout 'state: approved'
 
 # --- invalid deviation.json (missing adrId): refused, nothing written ---
 exitcode 1 lifecycle approve --stage design --approve 099-other-change
@@ -46,6 +50,11 @@ consentPolicy: off
 
 -- constitution.yml --
 schemaVersion: 1
+# phase is REQUIRED as of adr-sourced-constitution v0.2.0 and has no default.
+# "sealed" = append-only forever with the full guard semantics, which is what
+# this script exercises (a real ADR, a rendered projection, a hash-checked
+# deviation).
+phase: sealed
 consent:
   policy: off
 sourceTracking:
