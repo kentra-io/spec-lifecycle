@@ -1,7 +1,7 @@
 {
   "name": "spec-lifecycle",
   "description": "Bootstrap skill for the spec-lifecycle primitive: lifecycle-init installs the CLI, elicits seeding choices, and scaffolds a project for the staged, human-gated, spec-driven issue lifecycle (refine → design → plan → archive, OpenSpec on-disk format). The per-stage skills are installed into the governed repo by `lifecycle init`, not bundled here.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Kentra"
   },
